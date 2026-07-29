@@ -1,0 +1,130 @@
+@startuml
+top to bottom direction
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam packageStyle rectangle
+
+package "Business Services" {
+    interface AuthService {
+        + authenticate(username: string, rawPassword: string) : string
+    }
+
+    interface SlotService {
+        + generateSlotsForSchedule(schedule: DentistSchedule) : Collection<DentistSessionSlot>
+        + getAvailableSlots(dentistId: int, date: date) : Collection<DentistSessionSlot>
+    }
+
+    interface AppointmentValidationService {
+        + validateAndBook(dto: BookingRequestDTO) : Appointment
+    }
+
+    interface BillingService {
+        + generateBill(appointmentNumber: int, discount: decimal) : Bill
+    }
+}
+
+package "Domain Models" {
+    abstract class User {
+        - int userId
+        - string username
+        - string password
+        - string fullName
+        - string role
+        - boolean isActive
+        + getUserId() : int
+        + getUsername() : string
+        + getRole() : string
+    }
+
+    class Patient {
+        - int patientId
+        - string address
+        - string contactNumber
+        - string nic
+        + getPatientId() : int
+        + getContactNumber() : string
+    }
+
+    class Dentist {
+        - int dentistId
+        - string specialization
+        - decimal consultationFee
+        + getDentistId() : int
+        + getConsultationFee() : decimal
+    }
+
+    class TreatmentType {
+        - int treatmentTypeId
+        - string treatmentName
+        - decimal baseCost
+        + getTreatmentTypeId() : int
+        + getBaseCost() : decimal
+    }
+
+    class DentistSchedule {
+        - int scheduleId
+        - date scheduleDate
+        - time sessionStartTime
+        - time sessionEndTime
+        - int slotDurationMinutes
+        + getScheduleId() : int
+    }
+
+    class DentistSessionSlot {
+        - int slotId
+        - int slotNumber
+        - time slotStartTime
+        - time slotEndTime
+        - boolean isBooked
+        + getSlotId() : int
+        + getIsBooked() : boolean
+        + markAsBooked() : void
+    }
+
+    class Appointment {
+        - int appointmentNumber
+        - date appointmentDate
+        - string status
+        - string notes
+        + getAppointmentNumber() : int
+        + getStatus() : string
+    }
+
+    class Bill {
+        - int billId
+        - decimal consultationFee
+        - decimal treatmentCost
+        - decimal totalCost
+        - decimal discountAmount
+        - decimal finalAmount
+        - string paymentStatus
+        + getBillId() : int
+        + getFinalAmount() : decimal
+    }
+}
+
+' Force Top-to-Bottom Package Layout
+"Business Services" -[hidden]down-> "Domain Models"
+
+' ---- Academic Structural Relationships ----
+
+' Inheritance Hierarchy (Is-A)
+User <|-- Patient
+User <|-- Dentist
+
+' Structural Associations (Has-A)
+Patient "1" -- "0..*" Appointment : schedules >
+Dentist "1" -- "0..*" DentistSchedule : manages >
+Dentist "1" -- "0..*" Appointment : attends >
+TreatmentType "1" -- "0..*" Appointment : applies to >
+Appointment "1" -- "0..1" Bill : triggers >
+
+' Strict Part-Whole Composition
+DentistSchedule "1" *-- "1..*" DentistSessionSlot : structurally contains >
+
+' ---- Behavioral Service Dependencies (Uses) ----
+AppointmentValidationService ..> Appointment : «instantiates»
+SlotService ..> DentistSessionSlot : «computes»
+BillingService ..> Bill : «calculates»
+
+@endl

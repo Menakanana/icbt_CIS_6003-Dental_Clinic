@@ -1,0 +1,46 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam actorStyle stick
+
+actor "Receptionist" as Recept
+actor "Administrator" as Admin
+
+Admin --|> Recept
+
+rectangle "Sunrise Dental Clinic Management System" {
+    usecase "UC-1: Authenticate User" as UC1
+    usecase "UC-2: Register & Search Patient" as UC2
+    usecase "UC-3: Manage Dentist Schedule & Slots" as UC3
+    usecase "UC-4: Search Available Slots" as UC4
+    usecase "UC-5: Book Appointment" as UC5
+    usecase "UC-5a: Validate Patient Overlap" as UC_Val
+    usecase "UC-6: Calculate & Issue Bill" as UC6
+    usecase "UC-6a: Compute Treatment Fee" as UC_Fee
+    usecase "UC-7: View Financial Reports" as UC7
+
+    Recept --> UC1
+    Recept --> UC2
+    Recept --> UC4
+    Recept --> UC5
+    Recept --> UC6
+    Admin --> UC3
+    Admin --> UC7
+
+    UC5 ..> UC_Val : <<include>>
+    UC5 ..> UC4 : <<extend>>
+    UC6 ..> UC_Fee : <<include>>
+}
+
+note right of UC_Val
+  Checks if patient has an overlapping booking:
+  (Existing Start Time < New End Time) AND
+  (Existing End Time > New Start Time)
+end note
+
+note right of UC6
+  Calculates Total = Consultation Fee + Base Cost
+  Applies discount and issues invoice
+end note
+@enduml
