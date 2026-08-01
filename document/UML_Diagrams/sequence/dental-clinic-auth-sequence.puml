@@ -1,0 +1,42 @@
+@startuml
+autonumber
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+
+actor "Staff User" as Staff
+participant "AuthApiController" as Controller
+participant "AuthService" as Service
+participant "UserRepository" as Repo
+participant "BCryptPasswordEncoder" as Encoder
+
+Staff -> Controller : POST /api/auth/login (LoginRequestDTO)
+activate Controller
+
+Controller -> Service : authenticate(username, rawPassword)
+activate Service
+
+Service -> Repo : findByUsername(username)
+activate Repo
+Repo --> Service : User Entity (or Optional.empty)
+deactivate Repo
+
+alt User Not Found
+    Service --> Controller : throw BadCredentialsException("Invalid username or password")
+    Controller --> Staff : 401 Unauthorized (Error JSON)
+else User Found
+    Service -> Encoder : matches(rawPassword, encodedPassword)
+    activate Encoder
+    Encoder --> Service : boolean matchResult
+    deactivate Encoder
+
+    alt Password Mismatch
+        Service --> Controller : throw BadCredentialsException("Invalid username or password")
+        Controller --> Staff : 401 Unauthorized (Error JSON)
+    else Password Match
+        Service --> Controller : AuthResponse (JWT Bearer Token, Role)
+        deactivate Service
+        Controller --> Staff : 200 OK (AuthResponse JSON)
+        deactivate Controller
+    end
+end
+@enduml

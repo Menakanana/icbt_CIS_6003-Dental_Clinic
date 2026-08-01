@@ -1,0 +1,41 @@
+@startuml
+autonumber
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+
+actor "Receptionist" as Recept
+participant "BillingApiController" as Controller
+participant "BillingService" as Service
+participant "AppointmentRepository" as ApptRepo
+participant "BillRepository" as BillRepo
+
+Recept -> Controller : POST /api/bills/generate (BillRequestDTO)
+activate Controller
+
+Controller -> Service : generateBill(appointmentNumber, discount)
+activate Service
+
+Service -> ApptRepo : findById(appointmentNumber)
+activate ApptRepo
+ApptRepo --> Service : Appointment Entity (with Dentist & TreatmentType)
+deactivate ApptRepo
+
+alt Appointment Not Found
+    Service --> Controller : throw IllegalArgumentException("Appointment not found")
+    Controller --> Recept : 404 Not Found (Error JSON)
+else Appointment Found
+    Service -> Service : Fetch Dentist.consultationFee & TreatmentType.baseCost
+    Service -> Service : Calculate totalCost = consultationFee + baseCost
+    Service -> Service : Calculate finalAmount = totalCost - discountAmount
+
+    Service -> BillRepo : save(Bill Snapshot Entity)
+    activate BillRepo
+    BillRepo --> Service : Saved Bill Entity
+    deactivate BillRepo
+
+    Service --> Controller : BillResponseDTO
+    deactivate Service
+    Controller --> Recept : 200 OK (Printed Invoice Bill JSON)
+    deactivate Controller
+end
+@enduml
