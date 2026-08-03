@@ -29,6 +29,10 @@ document/UML_Diagrams/
 │   ├── dental-clinic-billing-sequence.puml      <- Invoicing & Financial Snapshot Sequence
 │   └── dental-clinic-billing-sequence-specification.md
 │
+├── er/                                          <- Database ER Diagram
+│   ├── dental-clinic-er.puml                    <- Crow's Foot ER Diagram Code
+│   └── dental-clinic-er-specification.md        <- Detailed ER Data Dictionary & Cardinality Specs
+│
 └── activity/                                    <- Task B Activity Flowchart
     ├── dental-clinic-booking-activity.puml      <- Booking Swimlane Flowchart Code
     └── dental-clinic-booking-activity-specification.md
