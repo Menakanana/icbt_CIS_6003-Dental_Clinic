@@ -1,0 +1,49 @@
+@startuml
+skinparam shadowing false
+skinparam conditionStyle diamond
+
+|Presentation Tier (Web UI)|
+start
+:Receptionist submits Booking Request (DTO);
+
+|Application Tier (REST Web API)|
+:AppointmentApiController receives POST /api/appointments/book;
+:Validate DTO annotations (@Valid);
+
+if (DTO Validation Passed?) then (yes)
+    :AppointmentValidationService processes booking;
+    :Query SlotRepository for selected slotId;
+    
+    if (Slot Available (isBooked == false)?) then (yes)
+        :Query AppointmentRepository for patient overlaps;
+        
+        if (Patient Overlap Exists?\n(Existing Start < New End AND Existing End > New Start)) then (yes)
+            :Generate 409 Conflict Response (Patient Double-Booked);
+            |Presentation Tier (Web UI)|
+            :Display Error "Patient has overlapping appointment";
+            stop
+        else (no)
+            |Application Tier (REST Web API)|
+            :Mark DentistSessionSlot as Booked (isBooked = true);
+            :Save new Appointment Entity (Status = 'Scheduled');
+            :Generate 201 Created Response (Booking Details);
+            
+            |Presentation Tier (Web UI)|
+            :Display Booking Confirmation Screen;
+            stop
+        endif
+    else (no)
+        |Application Tier (REST Web API)|
+        :Generate 409 Conflict Response (Slot Unavailable);
+        |Presentation Tier (Web UI)|
+        :Display Error "Selected slot is already booked";
+        stop
+    endif
+else (no)
+    |Application Tier (REST Web API)|
+    :Generate 400 Bad Request Response;
+    |Presentation Tier (Web UI)|
+    :Display Form Validation Errors;
+    stop
+endif
+@enduml

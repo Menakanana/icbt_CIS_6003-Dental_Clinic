@@ -1,0 +1,52 @@
+@startuml
+autonumber
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+
+actor "Receptionist" as Recept
+participant "AppointmentApiController" as Controller
+participant "AppointmentValidationService" as Service
+participant "SlotRepository" as SlotRepo
+participant "AppointmentRepository" as ApptRepo
+
+Recept -> Controller : POST /api/appointments/book (BookingRequestDTO)
+activate Controller
+
+Controller -> Service : validateAndBook(BookingRequestDTO)
+activate Service
+
+Service -> SlotRepo : findById(slotId)
+activate SlotRepo
+SlotRepo --> Service : DentistSessionSlot Entity
+deactivate SlotRepo
+
+alt Slot Already Booked (isBooked == true)
+    Service --> Controller : throw IllegalStateException("Slot is already booked")
+    Controller --> Recept : 409 Conflict (Slot Unavailable JSON)
+else Slot Available
+    Service -> ApptRepo : findPatientOverlaps(patientId, appointmentDate, startTime, endTime)
+    activate ApptRepo
+    ApptRepo --> Service : List<Appointment>
+    deactivate ApptRepo
+
+    alt Patient Overlap Found (S1 < E2 AND E1 > S2)
+        Service --> Controller : throw IllegalStateException("Patient has overlapping appointment")
+        Controller --> Recept : 409 Conflict (Double Booking JSON)
+    else No Overlap Found
+        Service -> SlotRepo : markAsBooked(slotId)
+        activate SlotRepo
+        SlotRepo --> Service : Updated Slot
+        deactivate SlotRepo
+
+        Service -> ApptRepo : save(Appointment)
+        activate ApptRepo
+        ApptRepo --> Service : Saved Appointment Entity
+        deactivate ApptRepo
+
+        Service --> Controller : BookingResponseDTO
+        deactivate Service
+        Controller --> Recept : 201 Created (Appointment Details JSON)
+        deactivate Controller
+    end
+end
+@enduml
