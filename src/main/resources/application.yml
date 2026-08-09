@@ -1,0 +1,50 @@
+server:
+  port: 8081
+  servlet:
+    context-path: /
+
+logging:
+  level:
+    root: INFO
+    com.dentalclinic: DEBUG
+    org.springframework.security: DEBUG
+
+spring:
+  application:
+    name: dental-clinic-management-system
+
+  mvc:
+    view:
+      prefix: /WEB-INF/views/
+      suffix: .jsp
+
+  # Active Microsoft SQL Server Datasource Configuration
+  datasource:
+    url: jdbc:sqlserver://localhost:1433;databaseName=SunriseDentalClinic;encrypt=false;trustServerCertificate=true
+    driverClassName: com.microsoft.sqlserver.jdbc.SQLServerDriver
+    username: adminUser
+    password: adminUser
+
+  jpa:
+    database-platform: org.hibernate.dialect.SQLServerDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+# ==============================================================================
+# Commented Out: H2 In-Memory Database Configuration
+#
+#  datasource:
+#    url: jdbc:h2:mem:SunriseDentalClinic;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MSSQLServer
+#    driverClassName: org.h2.Driver
+#    username: sa
+#    password: ""
+#  h2:
+#    console:
+#      enabled: true
+#  jpa:
+#    database-platform: org.hibernate.dialect.H2Dialect
+# ==============================================================================
