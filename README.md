@@ -7,7 +7,7 @@ This repository contains the database design, architecture documentation, and sy
 - **Feature Development Schedule:** July 08, 2026 – August 31, 2026
 - **Submission Deadline:** September 05, 2026
 
-The system adopts a **Modern Code-First 3-Tier Web API Architecture** built on **Spring Boot, Spring Data JPA / Hibernate (ORM)** where all business rules, dynamic slot generation, patient overlap validation, financial calculations, and BCrypt security reside in clean, testable Java Application Services.
+The system adopts a **3-Tier Web Architecture** built on **Spring Boot, Spring Data JPA / Hibernate (ORM)**, featuring a **Hybrid Dual Layer** supporting both **Server-Side Rendered JSP Views** (`/WEB-INF/views/*.jsp`) and **Decoupled RESTful Web APIs** (`/api/*`). All business rules, dynamic slot generation, patient overlap validation, financial calculations, and BCrypt security reside in clean, testable Java Application Services.
 
 ---
 

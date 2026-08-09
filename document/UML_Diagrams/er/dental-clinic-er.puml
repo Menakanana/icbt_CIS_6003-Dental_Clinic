@@ -1,0 +1,129 @@
+@startuml
+skinparam shadowing false
+skinparam linetype ortho
+
+entity "Users" as Users {
+  * UserID : INT <<PK>>
+  --
+  * Username : VARCHAR(50) <<UQ>>
+  * Password : VARCHAR(255)
+  * FullName : VARCHAR(100)
+  * Role : VARCHAR(50)
+  Email : VARCHAR(100)
+  * IsActive : BIT
+  * CreatedDate : DATETIME2
+  LastLogin : DATETIME2
+  CreatedBy : INT <<FK>>
+}
+
+entity "Patients" as Patients {
+  * PatientID : INT <<PK>>
+  --
+  * PatientName : VARCHAR(100)
+  * ContactNumber : VARCHAR(15)
+  Address : VARCHAR(255)
+  Email : VARCHAR(100)
+  DateOfBirth : DATE
+  Gender : CHAR(1)
+  NIC : VARCHAR(20)
+  * RegisteredDate : DATETIME2
+  * IsActive : BIT
+}
+
+entity "Dentists" as Dentists {
+  * DentistID : INT <<PK>>
+  --
+  * DentistName : VARCHAR(100)
+  * ConsultationFee : DECIMAL(10,2)
+  Email : VARCHAR(100)
+  ContactNumber : VARCHAR(15)
+  Specialization : VARCHAR(100)
+  LicenseNumber : VARCHAR(50)
+  Qualifications : VARCHAR(255)
+  ExperienceYears : INT
+  * IsActive : BIT
+}
+
+entity "TreatmentTypes" as TreatmentTypes {
+  * TreatmentTypeID : INT <<PK>>
+  --
+  * TreatmentName : VARCHAR(100)
+  Description : VARCHAR(255)
+  * BaseCost : DECIMAL(10,2)
+  * IsActive : BIT
+}
+
+entity "DentistSchedule" as DentistSchedule {
+  * ScheduleID : INT <<PK>>
+  --
+  * DentistID : INT <<FK>>
+  * ScheduleDate : DATE
+  * SessionStartTime : TIME
+  * SessionEndTime : TIME
+  * SlotDurationMinutes : INT
+  * MaxPatientsInSession : INT
+  * IsActive : BIT
+}
+
+entity "DentistSessionSlots" as DentistSessionSlots {
+  * SlotID : INT <<PK>>
+  --
+  * ScheduleID : INT <<FK>>
+  * DentistID : INT <<FK>>
+  * SlotNumber : INT
+  * SlotStartTime : TIME
+  * SlotEndTime : TIME
+  * IsBooked : BIT
+}
+
+entity "Appointments" as Appointments {
+  * AppointmentNumber : INT <<PK>>
+  --
+  * PatientID : INT <<FK>>
+  * DentistID : INT <<FK>>
+  * TreatmentTypeID : INT <<FK>>
+  * ScheduleID : INT <<FK>>
+  * SlotID : INT <<FK>>
+  * AppointmentDate : DATE
+  * Status : VARCHAR(20)
+  Notes : VARCHAR(255)
+  * CreatedBy : INT <<FK>>
+}
+
+entity "Bills" as Bills {
+  * BillID : INT <<PK>>
+  --
+  * AppointmentNumber : INT <<FK, UQ>>
+  * PatientID : INT <<FK>>
+  * DentistID : INT <<FK>>
+  * ConsultationFee : DECIMAL(10,2)
+  * TreatmentCost : DECIMAL(10,2)
+  * TotalCost : DECIMAL(10,2)
+  DiscountAmount : DECIMAL(10,2)
+  * FinalAmount : DECIMAL(10,2)
+  * PaymentStatus : VARCHAR(20)
+  PaymentMethod : VARCHAR(50)
+  PaymentDate : DATETIME2
+  * BillDate : DATETIME2
+  * IssuedBy : INT <<FK>>
+}
+
+' Relational Cardinalities (Crow's Foot Notation)
+Users ||--o{ Users : "creates account"
+Users ||--o{ Appointments : "creates booking"
+Users ||--o{ Bills : "issues bill"
+
+Dentists ||--o{ DentistSchedule : "defines shift"
+Dentists ||--o{ DentistSessionSlots : "owns slots"
+DentistSchedule ||--|{ DentistSessionSlots : "contains"
+
+Patients ||--o{ Appointments : "books"
+Dentists ||--o{ Appointments : "attends"
+TreatmentTypes ||--o{ Appointments : "categorizes"
+DentistSessionSlots ||--|| Appointments : "reserves"
+
+Appointments ||--|| Bills : "generates invoice"
+Patients ||--o{ Bills : "billed to"
+Dentists ||--o{ Bills : "earns fee"
+
+@enduml

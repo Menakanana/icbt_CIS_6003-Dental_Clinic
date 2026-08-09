@@ -1,39 +1,42 @@
 # Sunrise Dental Clinic - Master Application & Architecture Guide
 
 ## Overview
-This document provides the master technical specification for the **Sunrise Dental Clinic Management System**. Built on **Spring Boot, Spring Data JPA / Hibernate (ORM)**, all core business logic, dynamic slot generation algorithms, patient overlap validations, financial bill calculations, DTO input validations, RBAC security, Global Exception Handling, Report Generation, Swagger UI OpenAPI, and CORS configurations reside in clean, testable Java Application Services exposed via **RESTful Web API endpoints (JSON)**.
+This document specifies the master technical architecture for the **Sunrise Dental Clinic Management System**. Built on **Spring Boot, Spring Data JPA / Hibernate (ORM)**, the application features a **Hybrid Architecture** supporting both **Server-Side Rendered JSP Views** (for traditional browser UI rendering) and **Decoupled RESTful Web APIs** (for JSON integration & automated testing).
 
 ---
 
-## 1. 3-Tier Layered REST Web API Architecture
+## 1. 3-Tier Architecture (JSP Views & REST Web API Dual-Layer)
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│               WEB APPLICATION FRONTEND                  │
-│       (HTML5 / CSS3 / Vanilla JavaScript UI)            │
+│               PRESENTATION LAYER (VIEW / UI)            │
+│  - JSP Views (/WEB-INF/views/*.jsp)                    │
+│    • login.jsp (Staff Sign In Interface)                │
+│    • dashboard.jsp (Staff Operations Portal)            │
+│    • booking.jsp (Appointment Slot Booking View)        │
+│    • billing.jsp (Invoice Generation & Payment View)    │
+│  - Web Browser Client (HTTP / Form Submissions / JSON)  │
 └───────────────────────────┬─────────────────────────────┘
-                            │ HTTP Requests / JSON Payloads + Bearer Token
+                            │ HTTP Requests / Form Data / JSON Payloads
 ┌───────────────────────────▼─────────────────────────────┐
-│           SECURITY & REST API CONTROLLER LAYER          │
-│  - SecurityConfig       (RBAC: Admin / Receptionist)    │
-│  - WebCorsConfig        (Cross-Origin Resource Sharing) │
-│  - OpenApiConfig        (Swagger UI API Documentation)  │
+│           SECURITY & CONTROLLER LAYER                   │
+│  - SecurityConfig       (BCrypt $2a$12$ Password Encoder)│
+│  - WebViewController    (Routes GET/POST to JSP Views)  │
+│  - AuthApiController       POST /api/auth/login (JSON)  │
+│  - PatientApiController    POST /api/patients (@Valid)  │
+│  - SlotApiController       GET  /api/slots/available    │
+│  - AppointmentApiController POST /api/appointments/book │
+│  - BillingApiController    POST /api/bills/generate     │
 │  - GlobalExceptionHandler (@RestControllerAdvice)        │
-│  - AuthController       POST /api/auth/login            │
-│  - PatientController    POST /api/patients (@Valid)     │
-│  - SlotController       GET  /api/slots/available       │
-│  - AppointmentController POST /api/appointments/book    │
-│  - BillingController    POST /api/bills/generate        │
-│  - ReportController     GET  /api/reports/*             │
 └───────────────────────────┬─────────────────────────────┘
                             │ Calls Service Interfaces
 ┌───────────────────────────▼─────────────────────────────┐
 │                 SERVICE / BUSINESS LAYER                │
-│  - AuthService (BCrypt Password Hashing & JWT Token)    │
-│  - SlotService (Dynamic Per-Dentist Slot Generation)     │
-│  - AppointmentValidationService (Overlap Detection)     │
-│  - BillingService (Financial Calculations & Snapshots)  │
-│  - ReportService (Schedule, Revenue, & History Reports) │
+│  - AuthService (BCrypt Password Verification)           │
+│  - SlotService (Dynamic Per-Dentist Slot Generation)    │
+│  - AppointmentValidationService (Overlap Detection)    │
+│  - BillingService (Financial Calculations & Snapshots) │
+│  - ReportService (Schedule, Revenue, & History Reports)│
 └───────────────────────────┬─────────────────────────────┘
                             │ Consumes Spring Data JPA Repositories
 ┌───────────────────────────▼─────────────────────────────┐
@@ -45,7 +48,7 @@ This document provides the master technical specification for the **Sunrise Dent
                             │ Hibernate ORM / Dialect
 ┌───────────────────────────▼─────────────────────────────┐
 │               RELATIONAL DATABASE STORAGE               │
-│            (SQL Server / H2 / MySQL DB)                 │
+│            (H2 In-Memory / MS SQL Server DB)            │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -53,13 +56,13 @@ This document provides the master technical specification for the **Sunrise Dent
 
 ## 2. Design Justification & Technical Trade-offs
 
-To satisfy academic rubric requirements for **Critical Reflection & Design Justification** (Task A & Task B), the table below highlights why alternative design choices were evaluated and superseded during the design phase:
+To satisfy academic rubric requirements for **Critical Reflection & Design Justification** (Task A & Task B), the table below highlights why alternative design choices were evaluated and superseded:
 
-| Architecture Considered | Technical Limitations / Trade-offs | Justification for Selected 3-Tier REST API Architecture |
+| Architecture Considered | Technical Limitations / Trade-offs | Justification for Selected Hybrid Architecture |
 |---|---|---|
+| **Pure REST API Only** | Requires modern JavaScript framework (React/Angular) runtime on client; syllabus requires server-side views. | **Hybrid JSP + REST Architecture:** Supports traditional JSP form submissions for course requirements while providing JSON REST APIs for automated testing. |
 | **Free-Form Time Booking** *(Unstructured appointment times)* | High risk of double-booking, irregular time gaps, and complex runtime validation. | **Per-Dentist Dynamic Slot System:** Pre-defined shift slots ($5, 15, 30$ min) guarantee zero double-booking and optimal schedule capacity. |
-| **Database-Centric Stored Procedures** *(Heavy T-SQL procedural logic)* | T-SQL vendor lock-in, hard to version-control in Git, difficult to unit test without database rollbacks or specialized T-SQL test frameworks. | **Code-First Service Layer:** Procedural logic moves to Java services (`SlotService`, `AppointmentValidationService`), allowing fast in-memory unit testing and clean versioning. |
-| **Monolithic Desktop Client** *(Swing / JavaFX GUI coupled with DB)* | Lacks distributed architecture, difficult to access over web protocols, hard to integrate with web API clients. | **Decoupled REST Web API:** Java backend exposes JSON web services accessible by web browsers, mobile web, or third-party clinic tools. |
+| **Database-Centric Stored Procedures** *(Heavy T-SQL procedural logic)* | T-SQL vendor lock-in, hard to version-control in Git, difficult to unit test without database rollbacks. | **Code-First Service Layer:** Procedural logic moves to Java services (`SlotService`, `AppointmentValidationService`), allowing fast in-memory unit testing. |
 
 ---
 
@@ -70,7 +73,7 @@ To satisfy academic rubric requirements for **Critical Reflection & Design Justi
 | **Repository Pattern** | Enterprise | `AppointmentRepository`, `PatientRepository` | Hides JPA/SQL queries behind entity interfaces. |
 | **Service Layer Pattern** | Enterprise | `SlotService`, `AppointmentValidationService` | Encapsulates complex business rules & validations. |
 | **DTO Pattern** | Structural | `BookingRequestDTO`, `PatientDTO`, `BillResponseDTO` | Decouples HTTP JSON payloads from DB entities. |
-| **Controller Pattern** | Architectural | `AppointmentApiController`, `AuthApiController` | Handles HTTP routing & request payload validations. |
+| **Controller Pattern** | Architectural | `WebViewController`, `AuthApiController` | Handles HTTP routing & JSP view rendering. |
 | **Singleton Pattern** | Creational | `@Service`, `@Repository`, `@Bean` Spring Beans | Ensures a single shared memory instance for services. |
 | **Factory Pattern** | Creational | `SlotService`, `BillingService` | Encapsulates dynamic slot & bill snapshot creation. |
 
@@ -78,7 +81,6 @@ To satisfy academic rubric requirements for **Critical Reflection & Design Justi
 
 ## 4. Active Reference Specifications
 
-- 📂 [`document/UML_Diagrams/`](file:///d:/BSC/CIS_6003-Advanced_Programming/Assignment/icbt_CIS_6003-Dental_Clinic/document/UML_Diagrams) – Complete Mermaid.js UML Diagram Suite (Use Case, Class, Sequence, ER, Activity Diagrams).
+- 📂 [`document/UML_Diagrams/`](file:///d:/BSC/CIS_6003-Advanced_Programming/Assignment/icbt_CIS_6003-Dental_Clinic/document/UML_Diagrams) – Complete UML Diagram Suite (Use Case, Class, Sequence, ER, Activity Diagrams).
 - 📄 [`document/DATABASE_DESIGN_DOCUMENT.md`](file:///d:/BSC/CIS_6003-Advanced_Programming/Assignment/icbt_CIS_6003-Dental_Clinic/document/DATABASE_DESIGN_DOCUMENT.md) – Relational Data Dictionary & Schema Specification.
 - 📄 [`document/PROJECT_DEVELOPMENT_TIMELINE.md`](file:///d:/BSC/CIS_6003-Advanced_Programming/Assignment/icbt_CIS_6003-Dental_Clinic/document/PROJECT_DEVELOPMENT_TIMELINE.md) – Feature-Driven Development Plan & Sprint Roadmap.
-- 📄 [`document/Assignment_CIS6003_Advanced_Programming.md`](file:///d:/BSC/CIS_6003-Advanced_Programming/Assignment/icbt_CIS_6003-Dental_Clinic/document/Assignment_CIS6003_Advanced_Programming.md) – Official assignment brief.
