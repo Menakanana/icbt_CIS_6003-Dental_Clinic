@@ -1,5 +1,8 @@
 package com.dentalclinic.dto;
 
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
 /**
@@ -9,9 +12,17 @@ import java.math.BigDecimal;
 public class DentistDTO {
 
     private Integer dentistId;
+
+    @NotBlank(message = "Doctor name is required")
     private String dentistName;
+
+    @NotBlank(message = "Specialization is required")
     private String specialization;
+
     private String contactNumber;
+
+    @NotNull(message = "Consultation fee is required")
+    @DecimalMin(value = "0.01", message = "Consultation fee must be greater than 0.00")
     private BigDecimal consultationFee;
 
     public DentistDTO() {

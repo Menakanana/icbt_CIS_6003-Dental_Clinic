@@ -3,7 +3,6 @@ package com.dentalclinic.controller.api;
 import com.dentalclinic.dto.PatientDTO;
 import com.dentalclinic.service.PatientService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,10 +22,11 @@ import java.util.List;
 public class PatientApiController {
 
     private final PatientService patientService;
+    private final com.dentalclinic.service.AppointmentService appointmentService;
 
-    @Autowired
-    public PatientApiController(PatientService patientService) {
+    public PatientApiController(PatientService patientService, com.dentalclinic.service.AppointmentService appointmentService) {
         this.patientService = patientService;
+        this.appointmentService = appointmentService;
     }
 
     /**
@@ -62,5 +62,14 @@ public class PatientApiController {
     public ResponseEntity<PatientDTO> getPatientById(@PathVariable("id") Integer id) {
         PatientDTO patient = patientService.getPatientById(id);
         return ResponseEntity.ok(patient);
+    }
+
+    /**
+     * GET /api/patients/{id}/history - Fetch full visit and treatment history for a patient.
+     */
+    @GetMapping("/{id}/history")
+    public ResponseEntity<List<com.dentalclinic.dto.AppointmentTicketDTO>> getPatientVisitHistory(@PathVariable("id") Integer id) {
+        List<com.dentalclinic.dto.AppointmentTicketDTO> history = appointmentService.getPatientVisitHistory(id);
+        return ResponseEntity.ok(history);
     }
 }

@@ -33,6 +33,9 @@ public class AppointmentTicketDTO {
     private String displayTimeRange;
     private String status;
     private BigDecimal consultationFee;
+    private String treatmentName;
+    private BigDecimal treatmentBaseCost;
+    private String notes;
 
     public AppointmentTicketDTO() {
     }
@@ -104,6 +107,15 @@ public class AppointmentTicketDTO {
 
     public BigDecimal getConsultationFee() { return consultationFee; }
     public void setConsultationFee(BigDecimal consultationFee) { this.consultationFee = consultationFee; }
+
+    public String getTreatmentName() { return treatmentName; }
+    public void setTreatmentName(String treatmentName) { this.treatmentName = treatmentName; }
+
+    public BigDecimal getTreatmentBaseCost() { return treatmentBaseCost; }
+    public void setTreatmentBaseCost(BigDecimal treatmentBaseCost) { this.treatmentBaseCost = treatmentBaseCost; }
+
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
 
     public Integer tokenNumber() { return tokenNumber; }
     public String patientName() { return patientName; }

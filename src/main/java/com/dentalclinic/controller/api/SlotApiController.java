@@ -2,7 +2,6 @@ package com.dentalclinic.controller.api;
 
 import com.dentalclinic.dto.SlotDTO;
 import com.dentalclinic.service.SlotService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,7 +22,6 @@ public class SlotApiController {
 
     private final SlotService slotService;
 
-    @Autowired
     public SlotApiController(SlotService slotService) {
         this.slotService = slotService;
     }
@@ -35,7 +33,7 @@ public class SlotApiController {
     public ResponseEntity<List<SlotDTO>> getAvailableSlots(
             @RequestParam("dentistId") Integer dentistId,
             @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        
+
         List<SlotDTO> slots = slotService.generateAvailableSlots(dentistId, date);
         return ResponseEntity.ok(slots);
     }

@@ -46,4 +46,13 @@ public class AppointmentApiController {
         List<AppointmentTicketDTO> list = appointmentService.getTodayAppointments();
         return ResponseEntity.ok(list);
     }
+
+    /**
+     * GET /api/appointments/{id} - Search single appointment details by ID.
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<AppointmentTicketDTO> getAppointmentById(@PathVariable("id") Integer id) {
+        AppointmentTicketDTO ticket = appointmentService.getAppointmentById(id);
+        return ResponseEntity.ok(ticket);
+    }
 }

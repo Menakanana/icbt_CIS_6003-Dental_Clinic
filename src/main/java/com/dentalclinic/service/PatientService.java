@@ -33,6 +33,25 @@ public class PatientService {
      * @return PatientDTO Saved patient details including generated ID
      */
     public PatientDTO registerPatient(PatientDTO dto) {
+        if (dto.dateOfBirth() != null && dto.dateOfBirth().isAfter(java.time.LocalDate.now())) {
+            throw new IllegalArgumentException("Patient Date of Birth cannot be in the future.");
+        }
+
+        String nic = dto.nic() != null ? dto.nic().trim() : "";
+        String name = dto.patientName() != null ? dto.patientName().trim() : "";
+
+        // Check 1: Unique NIC check (only when NIC is provided)
+        if (!nic.isEmpty() && patientRepository.existsByNicAndIsActiveTrue(nic)) {
+            throw new IllegalArgumentException("A patient with NIC '" + nic + "' is already registered.");
+        }
+
+        // Check 2: Compound Duplicate check for Minors / Patients Without NIC (Same Name + Same DOB)
+        if (nic.isEmpty() && !name.isEmpty() && dto.dateOfBirth() != null) {
+            if (patientRepository.existsByPatientNameIgnoreCaseAndDateOfBirthAndIsActiveTrue(name, dto.dateOfBirth())) {
+                throw new IllegalArgumentException("A patient named '" + name + "' born on " + dto.dateOfBirth() + " is already registered.");
+            }
+        }
+
         // Map DTO record accessors to Entity
         Patient patient = new Patient(
                 dto.patientName(),

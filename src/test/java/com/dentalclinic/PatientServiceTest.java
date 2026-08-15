@@ -122,4 +122,24 @@ public class PatientServiceTest {
         assertEquals("Patient not found with ID: 999", exception.getMessage());
         verify(patientRepository, times(1)).findById(999);
     }
+
+    @Test
+    @DisplayName("Scenario 5: Duplicate NIC Registration Throws IllegalArgumentException")
+    public void testRegisterPatient_DuplicateNIC_ThrowsException() {
+        PatientDTO inputDto = new PatientDTO(null, "John Doe", "0771234567", "johndoe@gmail.com", "123 Galle Rd", "199012345678", LocalDate.of(1990, 5, 15), "M");
+        when(patientRepository.existsByNicAndIsActiveTrue("199012345678")).thenReturn(true);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> patientService.registerPatient(inputDto));
+        assertTrue(ex.getMessage().contains("already registered"));
+    }
+
+    @Test
+    @DisplayName("Scenario 6: Duplicate Minor Name and DOB Registration Throws IllegalArgumentException")
+    public void testRegisterPatient_DuplicateMinor_ThrowsException() {
+        PatientDTO inputDto = new PatientDTO(null, "Little Johnny", "0771234567", null, "123 Galle Rd", "", LocalDate.of(2015, 6, 20), "M");
+        when(patientRepository.existsByPatientNameIgnoreCaseAndDateOfBirthAndIsActiveTrue("Little Johnny", LocalDate.of(2015, 6, 20))).thenReturn(true);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> patientService.registerPatient(inputDto));
+        assertTrue(ex.getMessage().contains("already registered"));
+    }
 }

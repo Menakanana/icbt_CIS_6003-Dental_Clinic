@@ -12,4 +12,6 @@ import java.util.List;
 @Repository
 public interface DentistRepository extends JpaRepository<Dentist, Integer> {
     List<Dentist> findByIsActiveTrue();
+    boolean existsByDentistNameIgnoreCaseAndIsActiveTrue(String dentistName);
+    boolean existsByDentistNameIgnoreCaseAndContactNumberAndIsActiveTrue(String dentistName, String contactNumber);
 }

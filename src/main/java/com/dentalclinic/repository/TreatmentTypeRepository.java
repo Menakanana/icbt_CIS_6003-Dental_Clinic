@@ -12,4 +12,5 @@ import java.util.List;
 @Repository
 public interface TreatmentTypeRepository extends JpaRepository<TreatmentType, Integer> {
     List<TreatmentType> findByIsActiveTrue();
+    boolean existsByTreatmentNameIgnoreCaseAndIsActiveTrue(String treatmentName);
 }
