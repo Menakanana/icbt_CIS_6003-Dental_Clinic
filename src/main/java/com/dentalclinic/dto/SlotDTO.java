@@ -46,6 +46,7 @@ public class SlotDTO {
 
     public String getDisplayTime() { return displayTime; }
     public void setDisplayTime(String displayTime) { this.displayTime = displayTime; }
+    public String getDisplayTimeRange() { return displayTime; }
 
     public Boolean getIsAvailable() { return isAvailable; }
     public void setIsAvailable(Boolean isAvailable) { this.isAvailable = isAvailable; }
@@ -55,5 +56,6 @@ public class SlotDTO {
     public LocalTime startTime() { return startTime; }
     public LocalTime endTime() { return endTime; }
     public String displayTime() { return displayTime; }
+    public String displayTimeRange() { return displayTime; }
     public Boolean isAvailable() { return isAvailable; }
 }

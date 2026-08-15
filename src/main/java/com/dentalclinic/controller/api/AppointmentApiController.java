@@ -61,6 +61,17 @@ public class AppointmentApiController {
     }
 
     /**
+     * GET /api/appointments/search?q=query&date=YYYY-MM-DD - Search appointments by patient name, phone, NIC, APT ID, or date.
+     */
+    @GetMapping("/search")
+    public ResponseEntity<List<AppointmentTicketDTO>> searchAppointments(
+            @RequestParam(value = "q", required = false) String query,
+            @RequestParam(value = "date", required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate date) {
+        List<AppointmentTicketDTO> list = appointmentService.searchAppointments(query, date);
+        return ResponseEntity.ok(list);
+    }
+
+    /**
      * GET /api/appointments/{id} - Search single appointment details by ID.
      */
     @GetMapping("/{id}")
@@ -70,14 +81,16 @@ public class AppointmentApiController {
     }
 
     /**
-     * POST /api/appointments/{id}/reschedule - Reschedule existing appointment to new date/time.
+     * POST /api/appointments/{id}/reschedule - Reschedule existing appointment to new date/time/dentist.
      */
     @PostMapping("/{id}/reschedule")
     public ResponseEntity<AppointmentTicketDTO> rescheduleAppointment(
             @PathVariable("id") Integer id,
+            @RequestParam(name = "dentistId", required = false) Integer newDentistId,
             @RequestParam("date") @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate newDate,
-            @RequestParam("startTime") @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.TIME) java.time.LocalTime newStartTime) {
-        AppointmentTicketDTO updated = appointmentService.rescheduleAppointment(id, newDate, newStartTime, null);
+            @RequestParam(name = "startTime", required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.TIME) java.time.LocalTime newStartTime,
+            @RequestParam(name = "tokenNumber", required = false) Integer tokenNumber) {
+        AppointmentTicketDTO updated = appointmentService.rescheduleAppointment(id, newDentistId, newDate, newStartTime, null, tokenNumber);
         return ResponseEntity.ok(updated);
     }
 

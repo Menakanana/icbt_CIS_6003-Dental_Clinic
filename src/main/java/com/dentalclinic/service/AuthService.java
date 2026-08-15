@@ -241,5 +241,58 @@ public class AuthService {
 
         return savedUser;
     }
+
+    @Transactional
+    public User toggleStaffStatus(Integer userId) {
+        if (userId == null) {
+            throw new IllegalArgumentException("User ID is required.");
+        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User ID #" + userId + " not found."));
+        user.setIsActive(!Boolean.TRUE.equals(user.getIsActive()));
+        return userRepository.save(user);
+    }
+
+    @Transactional
+    public User updateStaffUser(Integer userId, String fullName, String email, String role) {
+        if (userId == null) {
+            throw new IllegalArgumentException("User ID is required.");
+        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User ID #" + userId + " not found."));
+        if (fullName != null && !fullName.trim().isEmpty()) {
+            user.setFullName(fullName.trim());
+        }
+        if (email != null && !email.trim().isEmpty()) {
+            user.setEmail(email.trim());
+        }
+        if (role != null && !role.trim().isEmpty()) {
+            user.setRole(role.trim().equalsIgnoreCase("Admin") ? "Admin" : "Receptionist");
+        }
+        return userRepository.save(user);
+    }
+
+    @Transactional
+    public String triggerStaffPasswordReset(Integer userId) {
+        if (userId == null) {
+            throw new IllegalArgumentException("User ID is required.");
+        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User ID #" + userId + " not found."));
+
+        resetTokenRepository.deleteByUser(user);
+        String resetTokenStr = "RST-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        LocalDateTime expiryDate = LocalDateTime.now().plusMinutes(30);
+
+        PasswordResetToken tokenEntity = new PasswordResetToken(resetTokenStr, user, expiryDate);
+        resetTokenRepository.save(tokenEntity);
+
+        String emailToUse = (user.getEmail() != null && !user.getEmail().isEmpty())
+                ? user.getEmail()
+                : user.getUsername() + "@sunrisedental.com";
+
+        emailNotificationService.sendPasswordResetEmail(emailToUse, user.getFullName(), resetTokenStr);
+        return "Password reset link ('" + resetTokenStr + "') generated and sent to " + emailToUse + ".";
+    }
 }
 

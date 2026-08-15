@@ -111,27 +111,69 @@ public class DentistService {
     }
 
     /**
-     * Marks a Doctor OFF DUTY for a specific date and deactivates their shift schedule on that day.
+     * Marks a Doctor OFF DUTY for a specific date and deactivates all their shift schedules on that day.
      */
     @Transactional
     public void markDoctorOffDuty(Integer dentistId, java.time.LocalDate scheduleDate) {
         if (scheduleDate == null) {
             throw new IllegalArgumentException("Schedule date is required.");
         }
-        DentistSchedule schedule = scheduleRepository
-                .findFirstByDentist_DentistIdAndScheduleDate(dentistId, scheduleDate)
-                .orElseGet(() -> {
-                    Dentist dentist = dentistRepository.findById(dentistId)
-                            .orElseThrow(() -> new ResourceNotFoundException("Dentist not found with ID: " + dentistId));
-                    DentistSchedule s = new DentistSchedule();
-                    s.setDentist(dentist);
-                    s.setScheduleDate(scheduleDate);
-                    s.setSessionStartTime(java.time.LocalTime.of(9, 0));
-                    s.setSessionEndTime(java.time.LocalTime.of(17, 0));
-                    return s;
-                });
-        schedule.setIsActive(false);
-        scheduleRepository.save(schedule);
+        List<DentistSchedule> schedules = scheduleRepository
+                .findByDentist_DentistIdAndScheduleDate(dentistId, scheduleDate);
+
+        if (schedules != null && !schedules.isEmpty()) {
+            schedules.forEach(s -> s.setIsActive(false));
+            scheduleRepository.saveAll(schedules);
+        } else {
+            Dentist dentist = dentistRepository.findById(dentistId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Dentist not found with ID: " + dentistId));
+            DentistSchedule s = new DentistSchedule();
+            s.setDentist(dentist);
+            s.setScheduleDate(scheduleDate);
+            s.setSessionStartTime(java.time.LocalTime.of(9, 0));
+            s.setSessionEndTime(java.time.LocalTime.of(17, 0));
+            s.setIsActive(false);
+            scheduleRepository.save(s);
+        }
+    }
+
+    /**
+     * Marks a Doctor ON DUTY for a specific date, re-activating shift schedules or creating a default active shift.
+     */
+    @Transactional
+    public void markDoctorOnDuty(Integer dentistId, java.time.LocalDate scheduleDate) {
+        if (scheduleDate == null) {
+            throw new IllegalArgumentException("Schedule date is required.");
+        }
+        List<DentistSchedule> schedules = scheduleRepository
+                .findByDentist_DentistIdAndScheduleDate(dentistId, scheduleDate);
+
+        if (schedules != null && !schedules.isEmpty()) {
+            schedules.forEach(s -> s.setIsActive(true));
+            scheduleRepository.saveAll(schedules);
+        } else {
+            Dentist dentist = dentistRepository.findById(dentistId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Dentist not found with ID: " + dentistId));
+            DentistSchedule s = new DentistSchedule();
+            s.setDentist(dentist);
+            s.setScheduleDate(scheduleDate);
+            s.setSessionStartTime(java.time.LocalTime.of(9, 0));
+            s.setSessionEndTime(java.time.LocalTime.of(13, 0));
+            s.setMaxPatientsInSession(10);
+            s.setSlotDurationMinutes(24);
+            s.setIsActive(true);
+            scheduleRepository.save(s);
+        }
+    }
+
+    /**
+     * Deactivates / Removes an individual shift session block by Schedule ID.
+     */
+    @Transactional
+    public void deleteScheduleSession(Integer scheduleId) {
+        DentistSchedule schedule = scheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Schedule block not found with ID: " + scheduleId));
+        scheduleRepository.delete(schedule);
     }
 
     /**
@@ -188,5 +230,16 @@ public class DentistService {
                     return dto;
                 })
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Deactivates / Soft-deletes a Doctor profile.
+     */
+    @Transactional
+    public void deleteDentist(Integer dentistId) {
+        Dentist dentist = dentistRepository.findById(dentistId)
+                .orElseThrow(() -> new ResourceNotFoundException("Dentist not found with ID: " + dentistId));
+        dentist.setIsActive(false);
+        dentistRepository.save(dentist);
     }
 }

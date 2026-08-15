@@ -80,14 +80,15 @@ public class EmailNotificationService {
                   <div class="token-badge">
                     <div class="token-label">YOUR QUEUE TOKEN NUMBER</div>
                     <div class="token-num">#%d</div>
-                    <div style="font-size:13px; color:#047857; margin-top:4px;">%s</div>
+                    <div style="font-size:14px; font-weight:700; color:#92400E; margin-top:6px; background:#FEF3C7; padding:4px 8px; border-radius:4px; display:inline-block;">⏰ Please arrive by %s (15 mins prior)</div>
                   </div>
                   <table class="details-table">
                     <tr><td class="label">Patient Name:</td><td class="val">%s</td></tr>
                     <tr><td class="label">Appointment ID:</td><td class="val">APT-%d</td></tr>
                     <tr><td class="label">Assigned Doctor:</td><td class="val">%s (%s)</td></tr>
                     <tr><td class="label">Appointment Date:</td><td class="val">%s</td></tr>
-                    <tr><td class="label">Time Window:</td><td class="val">%s</td></tr>
+                    <tr><td class="label">Session Hours:</td><td class="val">%s</td></tr>
+                    <tr><td class="label">Estimated Arrival:</td><td class="val"><strong>%s</strong> (15 mins prior)</td></tr>
                     <tr><td class="label">Clinic Address:</td><td class="val">123 Galle Road, Colombo 03</td></tr>
                     <tr><td class="label">Contact Phone:</td><td class="val">011-2345678 / 077-1234567</td></tr>
                   </table>
@@ -99,13 +100,14 @@ public class EmailNotificationService {
                 </html>
                 """.formatted(
                 ticket.getTokenNumber(),
-                ticket.getDisplayTimeRange(),
+                ticket.getEstimatedArrivalTime(),
                 ticket.getPatientName(),
                 ticket.getAppointmentId(),
                 ticket.getDentistName(),
                 ticket.getSpecialization() != null ? ticket.getSpecialization() : "General Consultation",
                 dateStr,
-                ticket.getDisplayTimeRange()
+                ticket.getSessionTimeWindow() != null ? ticket.getSessionTimeWindow() : "09:00 AM - 01:00 PM",
+                ticket.getEstimatedArrivalTime()
         );
 
         logger.info("[EMAIL-SERVICE] Dispatching Appointment Confirmation Email to: {}", targetEmail);

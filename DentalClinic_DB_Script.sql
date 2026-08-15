@@ -142,6 +142,16 @@ CREATE TABLE Appointments (
 );
 GO
 
+-- Table: appointment_treatments (Multi-Procedure Join Table)
+CREATE TABLE appointment_treatments (
+    appointment_id INT NOT NULL,
+    treatment_type_id INT NOT NULL,
+    PRIMARY KEY (appointment_id, treatment_type_id),
+    CONSTRAINT FK_ApptTreatments_Appt FOREIGN KEY (appointment_id) REFERENCES Appointments(AppointmentNumber),
+    CONSTRAINT FK_ApptTreatments_Type FOREIGN KEY (treatment_type_id) REFERENCES TreatmentTypes(TreatmentTypeID)
+);
+GO
+
 -- Table: Bills (Financial Snapshot Records)
 CREATE TABLE Bills (
     BillID INT PRIMARY KEY IDENTITY(1000,1),

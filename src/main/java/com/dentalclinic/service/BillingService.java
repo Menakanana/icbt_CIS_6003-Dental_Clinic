@@ -79,21 +79,39 @@ public class BillingService {
         List<BillingDTO.TreatmentItemDTO> treatmentItems = new ArrayList<>();
         String mainTreatmentName = "General Dental Consultation & Procedure";
 
+        List<TreatmentType> resolvedProcedures = new ArrayList<>();
         if (!isInitial && treatmentTypeIds != null && !treatmentTypeIds.isEmpty()) {
             for (Integer tId : treatmentTypeIds) {
                 if (tId != null) {
                     treatmentTypeRepository.findById(tId).ifPresent(tt -> {
+                        resolvedProcedures.add(tt);
                         BigDecimal cost = tt.getBaseCost() != null ? tt.getBaseCost() : BigDecimal.ZERO;
                         treatmentItems.add(new BillingDTO.TreatmentItemDTO(tt.getTreatmentName(), cost));
                     });
                 }
             }
+            if (!resolvedProcedures.isEmpty()) {
+                appointment.setTreatmentProcedures(resolvedProcedures);
+                appointment.setTreatmentType(resolvedProcedures.get(0));
+                appointmentRepository.save(appointment);
+            }
         }
 
-        // Fallback to appointment's saved treatment type if no list passed
-        if (!isInitial && treatmentItems.isEmpty() && appointment.getTreatmentType() != null) {
-            BigDecimal cost = appointment.getTreatmentType().getBaseCost() != null ? appointment.getTreatmentType().getBaseCost() : BigDecimal.ZERO;
-            treatmentItems.add(new BillingDTO.TreatmentItemDTO(appointment.getTreatmentType().getTreatmentName(), cost));
+        // Fallback: If no treatmentTypeIds passed in request, load saved treatment procedures from DB
+        if (!isInitial && treatmentItems.isEmpty()) {
+            List<TreatmentType> savedProcedures = appointment.getTreatmentProcedures();
+            if (savedProcedures != null && !savedProcedures.isEmpty()) {
+                for (TreatmentType tt : savedProcedures) {
+                    BigDecimal cost = tt.getBaseCost() != null ? tt.getBaseCost() : BigDecimal.ZERO;
+                    treatmentItems.add(new BillingDTO.TreatmentItemDTO(tt.getTreatmentName(), cost));
+                }
+            } else if (appointment.getTreatmentType() != null) {
+                TreatmentType tt = appointment.getTreatmentType();
+                BigDecimal cost = tt.getBaseCost() != null ? tt.getBaseCost() : BigDecimal.ZERO;
+                treatmentItems.add(new BillingDTO.TreatmentItemDTO(tt.getTreatmentName(), cost));
+                appointment.getTreatmentProcedures().add(tt);
+                appointmentRepository.save(appointment);
+            }
         }
 
         for (BillingDTO.TreatmentItemDTO item : treatmentItems) {
@@ -115,14 +133,20 @@ public class BillingService {
             netDue = BigDecimal.ZERO;
         }
 
+        String patientName = (appointment.getPatient() != null) ? appointment.getPatient().getPatientName() : "Guest / Walk-in Patient";
+        String patientContact = (appointment.getPatient() != null) ? appointment.getPatient().getContactNumber() : "N/A";
+        String dentistName = (appointment.getDentist() != null) ? appointment.getDentist().getDentistName() : "Unassigned Doctor";
+        String dentistSpec = (appointment.getDentist() != null) ? appointment.getDentist().getSpecialization() : "General Dentistry";
+        String medicalHistory = (appointment.getPatient() != null) ? appointment.getPatient().getMedicalHistory() : null;
+
         BillingDTO bill = new BillingDTO(
                 appointmentId + 5000,
                 appointment.getAppointmentId(),
                 appointment.getTokenNumber(),
-                appointment.getPatient().getPatientName(),
-                appointment.getPatient().getContactNumber(),
-                appointment.getDentist().getDentistName(),
-                appointment.getDentist().getSpecialization(),
+                patientName,
+                patientContact,
+                dentistName,
+                dentistSpec,
                 mainTreatmentName,
                 appointment.getAppointmentDate(),
                 consultationFee,
@@ -133,7 +157,8 @@ public class BillingService {
 
         bill.setBillStage(isInitial ? "INITIAL_DEPOSIT" : "FINAL_SETTLED");
         bill.setPaymentMethod(paymentMethod != null && !paymentMethod.trim().isEmpty() ? paymentMethod : "Cash");
-        bill.setMedicalHistory(appointment.getPatient() != null ? appointment.getPatient().getMedicalHistory() : null);
+        bill.setMedicalHistory(medicalHistory);
+        bill.setPatientEmail(appointment.getPatient() != null ? appointment.getPatient().getEmail() : null);
         bill.setPreviousPaidAmount(previousPaid);
         bill.setNetBalanceDue(netDue);
         bill.setTreatmentItems(treatmentItems);
@@ -148,7 +173,7 @@ public class BillingService {
             appointmentRepository.save(appointment);
         }
 
-        if (emailNotificationService != null) {
+        if (emailNotificationService != null && appointment.getPatient() != null && appointment.getPatient().getEmail() != null) {
             try {
                 emailNotificationService.sendBillingReceiptEmail(bill, appointment.getPatient().getEmail());
             } catch (Exception ex) {

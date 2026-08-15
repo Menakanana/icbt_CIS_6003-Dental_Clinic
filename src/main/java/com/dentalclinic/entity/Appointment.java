@@ -40,6 +40,14 @@ public class Appointment {
     @JoinColumn(name = "TreatmentTypeID")
     private TreatmentType treatmentType;
 
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "appointment_treatments",
+        joinColumns = @JoinColumn(name = "appointment_id"),
+        inverseJoinColumns = @JoinColumn(name = "treatment_type_id")
+    )
+    private java.util.List<TreatmentType> treatmentProcedures = new java.util.ArrayList<>();
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ScheduleID")
     private DentistSchedule schedule;
@@ -139,4 +147,14 @@ public class Appointment {
 
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
+
+    public java.util.List<TreatmentType> getTreatmentProcedures() {
+        if (treatmentProcedures == null) {
+            treatmentProcedures = new java.util.ArrayList<>();
+        }
+        return treatmentProcedures;
+    }
+    public void setTreatmentProcedures(java.util.List<TreatmentType> treatmentProcedures) {
+        this.treatmentProcedures = treatmentProcedures;
+    }
 }

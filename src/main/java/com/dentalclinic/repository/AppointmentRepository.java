@@ -40,4 +40,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Intege
             @Param("appointmentDate") LocalDate appointmentDate,
             @Param("startTime") LocalTime startTime,
             @Param("endTime") LocalTime endTime);
+
+    @Query("SELECT a FROM Appointment a WHERE LOWER(a.patient.patientName) LIKE LOWER(CONCAT('%', :query, '%')) OR a.patient.contactNumber LIKE CONCAT('%', :query, '%') OR a.patient.nic LIKE CONCAT('%', :query, '%') OR CAST(a.appointmentId AS string) LIKE CONCAT('%', :query, '%') OR CAST(a.appointmentNumber AS string) LIKE CONCAT('%', :query, '%') ORDER BY a.appointmentDate DESC, a.tokenNumber ASC")
+    List<Appointment> searchAppointments(@Param("query") String query);
 }

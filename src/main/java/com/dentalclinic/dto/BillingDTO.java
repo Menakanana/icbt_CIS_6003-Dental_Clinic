@@ -31,6 +31,7 @@ public class BillingDTO {
     private String billStage = "FINAL_SETTLED"; // INITIAL_DEPOSIT vs FINAL_SETTLED
     private String paymentMethod = "Cash";      // Cash, Credit/Debit Card, Bank Transfer
     private String medicalHistory;
+    private String patientEmail;
     private BigDecimal previousPaidAmount = BigDecimal.ZERO;
     private BigDecimal netBalanceDue = BigDecimal.ZERO;
     private java.util.List<TreatmentItemDTO> treatmentItems = new java.util.ArrayList<>();
@@ -79,6 +80,9 @@ public class BillingDTO {
 
     public String getMedicalHistory() { return medicalHistory; }
     public void setMedicalHistory(String medicalHistory) { this.medicalHistory = medicalHistory; }
+
+    public String getPatientEmail() { return patientEmail; }
+    public void setPatientEmail(String patientEmail) { this.patientEmail = patientEmail; }
 
     // Getters and Setters
     public Integer getInvoiceNumber() { return invoiceNumber; }

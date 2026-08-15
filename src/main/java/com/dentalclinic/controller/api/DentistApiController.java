@@ -76,6 +76,17 @@ public class DentistApiController {
     }
 
     /**
+     * POST /api/dentists/schedules/on-duty - Mark a Doctor ON DUTY for a specific date.
+     */
+    @PostMapping("/schedules/on-duty")
+    public ResponseEntity<java.util.Map<String, Object>> markDoctorOnDuty(
+            @RequestParam("dentistId") Integer dentistId,
+            @RequestParam("scheduleDate") @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate scheduleDate) {
+        dentistService.markDoctorOnDuty(dentistId, scheduleDate);
+        return ResponseEntity.ok(java.util.Map.of("success", true, "message", "Doctor marked ON DUTY for " + scheduleDate + "."));
+    }
+
+    /**
      * GET /api/dentists/schedules/date - Fetch shift schedules for a specific date.
      */
     @GetMapping("/schedules/date")
@@ -83,5 +94,23 @@ public class DentistApiController {
             @RequestParam("scheduleDate") @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate scheduleDate) {
         List<DentistScheduleDTO> list = dentistService.getSchedulesForDate(scheduleDate);
         return ResponseEntity.ok(list);
+    }
+
+    /**
+     * DELETE /api/dentists/schedules/{id} - Delete an individual shift session block.
+     */
+    @DeleteMapping("/schedules/{id}")
+    public ResponseEntity<java.util.Map<String, Object>> deleteScheduleSession(@PathVariable("id") Integer id) {
+        dentistService.deleteScheduleSession(id);
+        return ResponseEntity.ok(java.util.Map.of("success", true, "message", "Shift session block removed successfully."));
+    }
+
+    /**
+     * DELETE /api/dentists/{id} - Soft delete / Deactivate a Doctor profile.
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<java.util.Map<String, Object>> deleteDentist(@PathVariable("id") Integer id) {
+        dentistService.deleteDentist(id);
+        return ResponseEntity.ok(java.util.Map.of("success", true, "message", "Doctor profile deleted successfully."));
     }
 }

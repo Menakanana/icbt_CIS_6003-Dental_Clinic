@@ -15,6 +15,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Service for dynamic time slot generation, mathematical overlap evaluation,
@@ -56,76 +57,91 @@ public class SlotService {
         dentistRepository.findById(dentistId)
                 .orElseThrow(() -> new IllegalArgumentException("Dentist not found with ID: " + dentistId));
 
-        // Step 1: Fetch dentist schedule or generate default shift hours (09:00 AM -
-        // 01:00 PM or 02:00 PM - 06:00 PM)
-        LocalTime shiftStart = LocalTime.of(9, 0);
-        LocalTime shiftEnd = LocalTime.of(13, 0);
-        int slotDurationMinutes = 30;
+        // Step 1: Fetch dentist schedules for the selected date
+        List<DentistSchedule> allSchedules = scheduleRepository
+                .findByDentist_DentistIdAndScheduleDate(dentistId, selectedDate);
 
-        int maxPatients = 999;
+        List<DentistSchedule> activeSchedules = new ArrayList<>();
+        if (allSchedules != null && !allSchedules.isEmpty()) {
+            boolean anyExplicitOffDuty = allSchedules.stream().anyMatch(s -> Boolean.FALSE.equals(s.getIsActive()));
+            activeSchedules = allSchedules.stream()
+                    .filter(s -> Boolean.TRUE.equals(s.getIsActive()))
+                    .sorted(java.util.Comparator.comparing(DentistSchedule::getSessionStartTime))
+                    .collect(Collectors.toList());
 
-        DentistSchedule schedule = scheduleRepository
-                .findFirstByDentist_DentistIdAndScheduleDate(dentistId, selectedDate)
-                .orElse(null);
-
-        if (schedule != null) {
-            if (Boolean.FALSE.equals(schedule.getIsActive())) {
+            if (activeSchedules.isEmpty() && anyExplicitOffDuty) {
                 // Doctor is explicitly OFF DUTY on this date -> return empty list of available slots
                 return List.of();
             }
-            shiftStart = schedule.getSessionStartTime();
-            shiftEnd = schedule.getSessionEndTime();
+        }
+
+        if (activeSchedules.isEmpty()) {
+            // Default 1-session schedule if no database entry exists
+            DentistSchedule defaultSchedule = new DentistSchedule();
+            defaultSchedule.setSessionStartTime(LocalTime.of(9, 0));
+            defaultSchedule.setSessionEndTime(LocalTime.of(13, 0));
+            defaultSchedule.setSlotDurationMinutes(30);
+            defaultSchedule.setMaxPatientsInSession(null);
+            activeSchedules.add(defaultSchedule);
+        }
+
+        // Step 2: Fetch existing non-cancelled database appointments for overlap evaluation
+        List<Appointment> existingAppointments = appointmentRepository
+                .findByDentist_DentistIdAndAppointmentDateAndStatusNot(dentistId, selectedDate, "CANCELLED");
+
+        // Step 3: Iterate through all active session blocks and generate time slots
+        List<SlotDTO> slots = new ArrayList<>();
+        int tokenIndex = 1;
+
+        for (DentistSchedule schedule : activeSchedules) {
+            LocalTime shiftStart = schedule.getSessionStartTime();
+            LocalTime shiftEnd = schedule.getSessionEndTime();
+            int slotDurationMinutes = 30;
+            int maxPatientsInBlock = 999;
+
             if (schedule.getMaxPatientsInSession() != null && schedule.getMaxPatientsInSession() > 0) {
-                maxPatients = schedule.getMaxPatientsInSession();
+                maxPatientsInBlock = schedule.getMaxPatientsInSession();
                 long totalMins = java.time.Duration.between(shiftStart, shiftEnd).toMinutes();
                 if (totalMins > 0) {
-                    slotDurationMinutes = (int) Math.max(5, totalMins / maxPatients);
+                    slotDurationMinutes = (int) Math.max(5, totalMins / maxPatientsInBlock);
                 }
             } else if (schedule.getSlotDurationMinutes() != null && schedule.getSlotDurationMinutes() > 0) {
                 slotDurationMinutes = schedule.getSlotDurationMinutes();
             }
-        }
 
-        // Step 2: Fetch existing non-cancelled database appointments for overlap
-        // evaluation
-        List<Appointment> existingAppointments = appointmentRepository
-                .findByDentist_DentistIdAndAppointmentDateAndStatusNot(dentistId, selectedDate, "CANCELLED");
+            LocalTime currentTime = shiftStart;
+            int blockTokenCount = 0;
 
-        // Step 3: Loop and generate time slots with mathematical overlap evaluation
-        List<SlotDTO> slots = new ArrayList<>();
-        LocalTime currentTime = shiftStart;
-        int tokenIndex = 1;
+            while (blockTokenCount < maxPatientsInBlock && (currentTime.plusMinutes(slotDurationMinutes).isBefore(shiftEnd)
+                    || currentTime.plusMinutes(slotDurationMinutes).equals(shiftEnd))) {
+                LocalTime slotStart = currentTime;
+                LocalTime slotEnd = currentTime.plusMinutes(slotDurationMinutes);
 
-        while (tokenIndex <= maxPatients && (currentTime.plusMinutes(slotDurationMinutes).isBefore(shiftEnd)
-                || currentTime.plusMinutes(slotDurationMinutes).equals(shiftEnd))) {
-            LocalTime slotStart = currentTime;
-            LocalTime slotEnd = currentTime.plusMinutes(slotDurationMinutes);
+                // Mathematical Overlap Evaluation: (slotStart < appEnd) AND (slotEnd > appStart)
+                boolean isOverlapping = existingAppointments.stream()
+                        .anyMatch(app -> (slotStart.isBefore(app.getEndTime())) && (slotEnd.isAfter(app.getStartTime())));
 
-            // Mathematical Overlap Evaluation: (slotStart < appEnd) AND (slotEnd >
-            // appStart)
-            boolean isOverlapping = existingAppointments.stream()
-                    .anyMatch(app -> (slotStart.isBefore(app.getEndTime())) && (slotEnd.isAfter(app.getStartTime())));
+                // Prevent booking slots in the past if selectedDate is today
+                boolean isPastTime = false;
+                if (selectedDate.equals(LocalDate.now()) && slotStart.isBefore(LocalTime.now())) {
+                    isPastTime = true;
+                }
 
-            // Prevent booking slots in the past if selectedDate is today
-            boolean isPastTime = false;
-            if (selectedDate.equals(LocalDate.now()) && slotStart.isBefore(LocalTime.now())) {
-                isPastTime = true;
+                boolean available = (!isOverlapping) && (!isPastTime);
+                String formattedTime = slotStart.format(TIME_FORMATTER);
+
+                slots.add(new SlotDTO(
+                        tokenIndex,
+                        tokenIndex,
+                        slotStart,
+                        slotEnd,
+                        formattedTime,
+                        available));
+
+                currentTime = slotEnd;
+                tokenIndex++;
+                blockTokenCount++;
             }
-
-            boolean available = (!isOverlapping) && (!isPastTime);
-
-            String formattedTime = slotStart.format(TIME_FORMATTER) + " - " + slotEnd.format(TIME_FORMATTER);
-
-            slots.add(new SlotDTO(
-                    tokenIndex, // Using tokenIndex as slot ID identifier
-                    tokenIndex,
-                    slotStart,
-                    slotEnd,
-                    formattedTime,
-                    available));
-
-            currentTime = slotEnd;
-            tokenIndex++;
         }
 
         return slots;

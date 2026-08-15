@@ -14,6 +14,8 @@ import java.util.Optional;
 @Repository
 public interface DentistScheduleRepository extends JpaRepository<DentistSchedule, Integer> {
     List<DentistSchedule> findByDentist_DentistIdAndScheduleDateAndIsActiveTrue(Integer dentistId, LocalDate scheduleDate);
+    List<DentistSchedule> findByDentist_DentistIdAndScheduleDateAndIsActiveTrueOrderBySessionStartTimeAsc(Integer dentistId, LocalDate scheduleDate);
+    List<DentistSchedule> findByDentist_DentistIdAndScheduleDate(Integer dentistId, LocalDate scheduleDate);
     Optional<DentistSchedule> findFirstByDentist_DentistIdAndScheduleDateAndIsActiveTrue(Integer dentistId, LocalDate scheduleDate);
     Optional<DentistSchedule> findFirstByDentist_DentistIdAndScheduleDate(Integer dentistId, LocalDate scheduleDate);
     List<DentistSchedule> findByScheduleDate(LocalDate scheduleDate);

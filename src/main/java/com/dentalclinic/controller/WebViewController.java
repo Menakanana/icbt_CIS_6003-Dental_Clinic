@@ -46,6 +46,7 @@ public class WebViewController {
     private final DentistService dentistService;
     private final ClinicSettingService clinicSettingService;
     private final TreatmentTypeService treatmentTypeService;
+    private final com.dentalclinic.service.ReportService reportService;
 
     @Autowired
     public WebViewController(AuthService authService,
@@ -56,7 +57,8 @@ public class WebViewController {
                               BillingService billingService,
                               DentistService dentistService,
                               @Autowired(required = false) ClinicSettingService clinicSettingService,
-                              @Autowired(required = false) TreatmentTypeService treatmentTypeService) {
+                              @Autowired(required = false) TreatmentTypeService treatmentTypeService,
+                              com.dentalclinic.service.ReportService reportService) {
         this.authService = authService;
         this.patientService = patientService;
         this.dentistRepository = dentistRepository;
@@ -66,6 +68,7 @@ public class WebViewController {
         this.dentistService = dentistService;
         this.clinicSettingService = clinicSettingService;
         this.treatmentTypeService = treatmentTypeService;
+        this.reportService = reportService;
     }
 
     @GetMapping("/")
@@ -154,23 +157,43 @@ public class WebViewController {
                                      @RequestParam(name = "treatmentTypeIds", required = false) java.util.List<Integer> treatmentTypeIds,
                                      @RequestParam(name = "paymentMethod", required = false, defaultValue = "Cash") String paymentMethod,
                                      @RequestParam(name = "settle", required = false, defaultValue = "false") boolean settle,
+                                     jakarta.servlet.http.HttpSession session,
                                      Model model) {
-        java.util.List<Integer> ids = new java.util.ArrayList<>();
-        if (treatmentTypeIds != null && !treatmentTypeIds.isEmpty()) {
-            ids.addAll(treatmentTypeIds);
-        } else if (treatmentTypeId != null) {
-            ids.add(treatmentTypeId);
+        try {
+            java.util.List<Integer> ids = new java.util.ArrayList<>();
+            if (treatmentTypeIds != null && !treatmentTypeIds.isEmpty()) {
+                ids.addAll(treatmentTypeIds);
+            } else if (treatmentTypeId != null) {
+                ids.add(treatmentTypeId);
+            }
+            BillingDTO bill = billingService.calculateMultiProcedureBill(appointmentId, ids, discount, stage, paymentMethod, settle);
+            model.addAttribute("bill", bill);
+            return "receipt"; // Renders /WEB-INF/views/receipt.jsp
+        } catch (Exception ex) {
+            model.addAttribute("errorMessage", sanitizeErrorMessage(ex));
+            populateDashboardModel(session, model);
+            return "dashboard"; // Safely renders dashboard with user-friendly alert box
         }
-        BillingDTO bill = billingService.calculateMultiProcedureBill(appointmentId, ids, discount, stage, paymentMethod, settle);
-        model.addAttribute("bill", bill);
-        return "receipt"; // Renders /WEB-INF/views/receipt.jsp
     }
 
     @PostMapping("/dentists/save")
     public String handleWebSaveDentist(@ModelAttribute("dentistDTO") DentistDTO dentistDTO, jakarta.servlet.http.HttpSession session, Model model) {
         try {
+            boolean isUpdate = dentistDTO.getDentistId() != null;
             dentistService.saveDentist(dentistDTO);
-            model.addAttribute("successMessage", "Doctor profile saved successfully!");
+            model.addAttribute("successMessage", isUpdate ? "Doctor profile updated successfully!" : "Doctor profile saved successfully!");
+        } catch (Exception ex) {
+            model.addAttribute("errorMessage", sanitizeErrorMessage(ex));
+        }
+        populateDashboardModel(session, model);
+        return "dashboard";
+    }
+
+    @org.springframework.web.bind.annotation.RequestMapping(value = "/dentists/delete/{id}", method = {org.springframework.web.bind.annotation.RequestMethod.GET, org.springframework.web.bind.annotation.RequestMethod.POST})
+    public String handleWebDeleteDentist(@PathVariable("id") Integer dentistId, jakarta.servlet.http.HttpSession session, Model model) {
+        try {
+            dentistService.deleteDentist(dentistId);
+            model.addAttribute("successMessage", "Doctor profile deleted successfully!");
         } catch (Exception ex) {
             model.addAttribute("errorMessage", sanitizeErrorMessage(ex));
         }
@@ -256,6 +279,65 @@ public class WebViewController {
         return "dashboard";
     }
 
+    @org.springframework.web.bind.annotation.RequestMapping(value = "/admin/users/toggle/{id}", method = {org.springframework.web.bind.annotation.RequestMethod.GET, org.springframework.web.bind.annotation.RequestMethod.POST})
+    public String handleToggleStaffStatus(@PathVariable("id") Integer userId, jakarta.servlet.http.HttpSession session, Model model) {
+        try {
+            com.dentalclinic.entity.User updated = authService.toggleStaffStatus(userId);
+            String statusStr = Boolean.TRUE.equals(updated.getIsActive()) ? "ACTIVATED" : "DISABLED";
+            model.addAttribute("successMessage", "Staff account '" + updated.getUsername() + "' (" + updated.getRole() + ") has been " + statusStr + " successfully.");
+        } catch (Exception ex) {
+            model.addAttribute("errorMessage", sanitizeErrorMessage(ex));
+        }
+        populateDashboardModel(session, model);
+        return "dashboard";
+    }
+
+    @PostMapping("/admin/users/update")
+    public String handleUpdateStaffUser(@RequestParam("userId") Integer userId,
+                                        @RequestParam("fullName") String fullName,
+                                        @RequestParam("email") String email,
+                                        @RequestParam("role") String role,
+                                        jakarta.servlet.http.HttpSession session,
+                                        Model model) {
+        try {
+            com.dentalclinic.entity.User updated = authService.updateStaffUser(userId, fullName, email, role);
+            model.addAttribute("successMessage", "Staff account '" + updated.getUsername() + "' details updated successfully!");
+        } catch (Exception ex) {
+            model.addAttribute("errorMessage", sanitizeErrorMessage(ex));
+        }
+        populateDashboardModel(session, model);
+        return "dashboard";
+    }
+
+    @org.springframework.web.bind.annotation.RequestMapping(value = "/admin/users/reset-password/{id}", method = {org.springframework.web.bind.annotation.RequestMethod.GET, org.springframework.web.bind.annotation.RequestMethod.POST})
+    public String handleAdminResetStaffPassword(@PathVariable("id") Integer userId, jakarta.servlet.http.HttpSession session, Model model) {
+        try {
+            String resultMsg = authService.triggerStaffPasswordReset(userId);
+            model.addAttribute("successMessage", resultMsg);
+        } catch (Exception ex) {
+            model.addAttribute("errorMessage", sanitizeErrorMessage(ex));
+        }
+        populateDashboardModel(session, model);
+        return "dashboard";
+    }
+
+    @GetMapping("/admin/reports/view")
+    public String viewAdminReport(@RequestParam(name = "type", required = false, defaultValue = "DOCTOR_DEMAND") String type,
+                                  @RequestParam(name = "startDate", required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate startDate,
+                                  @RequestParam(name = "endDate", required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate endDate,
+                                  Model model) {
+        if (startDate == null) startDate = java.time.LocalDate.now().minusDays(30);
+        if (endDate == null) endDate = java.time.LocalDate.now();
+
+        com.dentalclinic.dto.AdminReportDTO report = reportService.generateReport(type, startDate, endDate);
+        model.addAttribute("report", report);
+        model.addAttribute("clinicName", clinicSettingService != null ? clinicSettingService.getSettingValue("clinic_name", "Sunrise Dental Clinic") : "Sunrise Dental Clinic");
+        model.addAttribute("clinicAddress", clinicSettingService != null ? clinicSettingService.getSettingValue("clinic_address", "123 Galle Road, Colombo 03") : "123 Galle Road, Colombo 03");
+        model.addAttribute("clinicPhone", clinicSettingService != null ? clinicSettingService.getSettingValue("clinic_phone", "011-2345678 / 077-1234567") : "011-2345678 / 077-1234567");
+
+        return "admin-report-template"; // Renders /WEB-INF/views/admin-report-template.jsp
+    }
+
     private String sanitizeErrorMessage(Throwable ex) {
         if (ex == null) return "An unexpected error occurred.";
         
@@ -302,6 +384,7 @@ public class WebViewController {
         model.addAttribute("dentists", dentistRepository.findByIsActiveTrue());
         model.addAttribute("schedules", dentistService.getAllActiveSchedules());
         model.addAttribute("todayAppointments", appointmentService.getTodayAppointments());
+        model.addAttribute("allAppointments", appointmentService.getAllAppointments());
         model.addAttribute("treatmentTypes", treatmentTypeService != null ? treatmentTypeService.getAllActiveTreatmentTypes() : java.util.Collections.emptyList());
         model.addAttribute("staffUsers", userRepository.findAll());
         model.addAttribute("clinicName", clinicSettingService != null ? clinicSettingService.getSettingValue("clinic_name", "Sunrise Dental Clinic") : "Sunrise Dental Clinic");

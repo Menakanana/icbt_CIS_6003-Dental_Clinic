@@ -32,6 +32,7 @@ public class AppointmentTicketDTO {
     private LocalTime endTime;
 
     private String displayTimeRange;
+    private String sessionTimeWindow;
     private String status;
     private BigDecimal consultationFee;
     private String treatmentName;
@@ -108,6 +109,18 @@ public class AppointmentTicketDTO {
 
     public String getDisplayTimeRange() { return displayTimeRange; }
     public void setDisplayTimeRange(String displayTimeRange) { this.displayTimeRange = displayTimeRange; }
+
+    public String getSessionTimeWindow() { return sessionTimeWindow; }
+    public void setSessionTimeWindow(String sessionTimeWindow) { this.sessionTimeWindow = sessionTimeWindow; }
+
+    public String getEstimatedArrivalTime() {
+        if (startTime == null) return "";
+        LocalTime arrival = startTime.minusMinutes(15);
+        int mins = arrival.getMinute();
+        int roundedMins = (mins / 15) * 15;
+        LocalTime roundedArrival = LocalTime.of(arrival.getHour(), roundedMins);
+        return roundedArrival.format(java.time.format.DateTimeFormatter.ofPattern("hh:mm a"));
+    }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
