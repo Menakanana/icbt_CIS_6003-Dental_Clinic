@@ -1,4 +1,4 @@
-package com.dentalclinic.controller;
+package com.dentalclinic.controller.api;
 
 import com.dentalclinic.dto.PatientDTO;
 import com.dentalclinic.service.PatientService;
@@ -13,7 +13,7 @@ import java.util.List;
 /**
  * REST Controller for Patient Management API endpoints.
  * 
- * Layer: Presentation / Controller Layer
+ * Layer: Presentation / API Controller Layer
  * Base URL: /api/patients
  * Handles: Creating and fetching patient records via RESTful JSON.
  */

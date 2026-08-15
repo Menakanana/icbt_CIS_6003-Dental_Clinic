@@ -1,4 +1,4 @@
-package com.dentalclinic.controller;
+package com.dentalclinic.controller.api;
 
 import com.dentalclinic.dto.SlotDTO;
 import com.dentalclinic.service.SlotService;
@@ -13,7 +13,7 @@ import java.util.List;
 /**
  * REST Controller for Dynamic Time Slot generation API endpoints.
  * 
- * Layer: Presentation Layer
+ * Layer: Presentation / API Controller Layer
  * Base Path: /api/slots
  */
 @RestController
