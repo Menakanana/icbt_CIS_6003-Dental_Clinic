@@ -31,7 +31,10 @@
 
         <div class="form-group">
             <label for="password">Password</label>
-            <input type="password" id="password" name="password" class="form-control" required placeholder="Enter password">
+            <div style="position: relative; display: flex; align-items: center;">
+                <input type="password" id="password" name="password" class="form-control" required placeholder="Enter password" style="padding-right: 42px;">
+                <button type="button" id="togglePasswordBtn" onclick="togglePasswordVisibility()" title="Show/Hide Password" style="position: absolute; right: 10px; background: none; border: none; cursor: pointer; font-size: 1.1rem; color: var(--text-muted); padding: 2px;">👁️</button>
+            </div>
         </div>
 
         <button type="submit" class="btn-submit">Sign In to Dashboard</button>
@@ -43,6 +46,20 @@
         • Administrator: <code>admin</code> / <code>admin123</code>
     </div>
 </div>
+
+<script>
+    function togglePasswordVisibility() {
+        const pwdInput = document.getElementById('password');
+        const toggleBtn = document.getElementById('togglePasswordBtn');
+        if (pwdInput.type === 'password') {
+            pwdInput.type = 'text';
+            toggleBtn.innerText = '🙈';
+        } else {
+            pwdInput.type = 'password';
+            toggleBtn.innerText = '👁️';
+        }
+    }
+</script>
 
 </body>
 </html>

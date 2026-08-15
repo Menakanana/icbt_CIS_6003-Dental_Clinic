@@ -116,6 +116,7 @@ Links Patient, Dentist, Treatment, and Slot for a scheduled visit.
 | `TreatmentTypeID`| `INT` | `FOREIGN KEY (TreatmentTypes)`| Selected treatment ID |
 | `ScheduleID` | `INT` | `FOREIGN KEY (DentistSchedule)`| Dentist schedule ID |
 | `SlotID` | `INT` | `FOREIGN KEY (DentistSessionSlots)`| Assigned slot ID |
+| `TokenNumber` | `INT` | `NOT NULL` | Sequential shift token number (#1, #2, #3...) |
 | `AppointmentDate` | `DATE` | `NOT NULL` | Appointment date |
 | `Status` | `VARCHAR(20)` | `NOT NULL DEFAULT 'Scheduled'`| Status (`Scheduled`, `Completed`, `Cancelled`) |
 | `Notes` | `VARCHAR(255)`| `NULL` | Booking notes |

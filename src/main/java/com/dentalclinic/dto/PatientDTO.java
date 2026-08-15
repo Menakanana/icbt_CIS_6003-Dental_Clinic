@@ -30,7 +30,7 @@ public class PatientDTO {
     private String address;
 
     @Pattern(
-        regexp = "^([0-9]{9}[vVxX]|[0-9]{12})$",
+        regexp = "^$|^([0-9]{9}[vVxX]|[0-9]{12})$",
         message = "Invalid Sri Lankan NIC format (must be 9 digits ending in V/X or 12 digits)"
     )
     private String nic;

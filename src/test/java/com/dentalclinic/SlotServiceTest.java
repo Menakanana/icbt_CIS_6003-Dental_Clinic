@@ -1,0 +1,94 @@
+package com.dentalclinic;
+
+import com.dentalclinic.dto.SlotDTO;
+import com.dentalclinic.entity.Dentist;
+import com.dentalclinic.entity.DentistSchedule;
+import com.dentalclinic.repository.AppointmentRepository;
+import com.dentalclinic.repository.DentistRepository;
+import com.dentalclinic.repository.DentistScheduleRepository;
+import com.dentalclinic.service.SlotService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.when;
+
+/**
+ * Unit Test Suite for SlotService dynamic slot generation and overlap calculations.
+ */
+@ExtendWith(MockitoExtension.class)
+public class SlotServiceTest {
+
+    @Mock
+    private DentistRepository dentistRepository;
+
+    @Mock
+    private DentistScheduleRepository scheduleRepository;
+
+    @Mock
+    private AppointmentRepository appointmentRepository;
+
+    @InjectMocks
+    private SlotService slotService;
+
+    private Dentist sampleDentist;
+    private LocalDate futureDate;
+
+    @BeforeEach
+    void setUp() {
+        sampleDentist = new Dentist("Dr. Sarah Chen", "Orthodontist", "0771112233", new BigDecimal("1500.00"));
+        sampleDentist.setDentistId(1);
+        futureDate = LocalDate.now().plusDays(5);
+    }
+
+    @Test
+    @DisplayName("Should generate 8 dynamic 30-minute slots for shift 09:00 AM to 01:00 PM")
+    void shouldGenerateDefaultSlots() {
+        when(dentistRepository.findById(1)).thenReturn(Optional.of(sampleDentist));
+        when(scheduleRepository.findFirstByDentist_DentistIdAndScheduleDateAndIsActiveTrue(eq(1), eq(futureDate)))
+                .thenReturn(Optional.empty());
+        when(appointmentRepository.findByDentist_DentistIdAndAppointmentDateAndStatusNot(eq(1), eq(futureDate), eq("CANCELLED")))
+                .thenReturn(Collections.emptyList());
+
+        List<SlotDTO> slots = slotService.generateAvailableSlots(1, futureDate);
+
+        assertNotNull(slots);
+        assertEquals(8, slots.size()); // (13:00 - 09:00) / 30 mins = 8 slots
+        assertTrue(slots.get(0).getIsAvailable());
+        assertEquals("09:00 AM - 09:30 AM", slots.get(0).getDisplayTime());
+        assertEquals(1, slots.get(0).getTokenNumber());
+    }
+
+    @Test
+    @DisplayName("Should respect custom DentistSchedule shift hours and slot duration")
+    void shouldRespectCustomDentistSchedule() {
+        DentistSchedule customSchedule = new DentistSchedule(
+                sampleDentist, futureDate, LocalTime.of(14, 0), LocalTime.of(16, 0), 15, 8
+        );
+
+        when(dentistRepository.findById(1)).thenReturn(Optional.of(sampleDentist));
+        when(scheduleRepository.findFirstByDentist_DentistIdAndScheduleDateAndIsActiveTrue(eq(1), eq(futureDate)))
+                .thenReturn(Optional.of(customSchedule));
+        when(appointmentRepository.findByDentist_DentistIdAndAppointmentDateAndStatusNot(eq(1), eq(futureDate), eq("CANCELLED")))
+                .thenReturn(Collections.emptyList());
+
+        List<SlotDTO> slots = slotService.generateAvailableSlots(1, futureDate);
+
+        assertNotNull(slots);
+        assertEquals(8, slots.size()); // 2 hours / 15 mins = 8 slots
+        assertEquals("02:00 PM - 02:15 PM", slots.get(0).getDisplayTime());
+    }
+}

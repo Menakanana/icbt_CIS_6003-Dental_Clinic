@@ -1,4 +1,4 @@
-package com.dentalclinic.controller;
+package com.dentalclinic.controller.api;
 
 import com.dentalclinic.dto.AuthResponseDTO;
 import com.dentalclinic.dto.LoginRequestDTO;
@@ -11,9 +11,9 @@ import org.springframework.web.bind.annotation.*;
 /**
  * REST Controller for Authentication API endpoints.
  * 
- * Layer: Presentation / Controller Layer
+ * Layer: Presentation / API Controller Layer
  * Base URL: /api/auth
- * Handles: JSON authentication requests and returns auth token / user details.
+ * Handles: JSON authentication requests using shared AuthService logic.
  */
 @RestController
 @RequestMapping("/api/auth")
