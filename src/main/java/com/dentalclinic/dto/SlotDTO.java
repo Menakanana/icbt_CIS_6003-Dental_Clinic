@@ -1,5 +1,6 @@
 package com.dentalclinic.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalTime;
 
 /**
@@ -9,8 +10,13 @@ public class SlotDTO {
 
     private Integer slotId;
     private Integer tokenNumber;
+
+    @JsonFormat(pattern = "HH:mm:ss")
     private LocalTime startTime;
+
+    @JsonFormat(pattern = "HH:mm:ss")
     private LocalTime endTime;
+
     private String displayTime;
     private Boolean isAvailable;
 
