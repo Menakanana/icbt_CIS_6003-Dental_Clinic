@@ -39,13 +39,19 @@ public class PatientService {
 
         String nic = dto.nic() != null ? dto.nic().trim() : "";
         String name = dto.patientName() != null ? dto.patientName().trim() : "";
+        String phone = dto.contactNumber() != null ? dto.contactNumber().trim() : "";
 
         // Check 1: Unique NIC check (only when NIC is provided)
         if (!nic.isEmpty() && patientRepository.existsByNicAndIsActiveTrue(nic)) {
             throw new IllegalArgumentException("A patient with NIC '" + nic + "' is already registered.");
         }
 
-        // Check 2: Compound Duplicate check for Minors / Patients Without NIC (Same Name + Same DOB)
+        // Check 2: Compound Duplicate check (Same Name + Same Phone Number for Family Members)
+        if (!name.isEmpty() && !phone.isEmpty() && patientRepository.existsByPatientNameIgnoreCaseAndContactNumberAndIsActiveTrue(name, phone)) {
+            throw new IllegalArgumentException("A patient profile for '" + name + "' with contact number '" + phone + "' already exists.");
+        }
+
+        // Check 3: Compound Duplicate check for Minors / Patients Without NIC (Same Name + Same DOB)
         if (nic.isEmpty() && !name.isEmpty() && dto.dateOfBirth() != null) {
             if (patientRepository.existsByPatientNameIgnoreCaseAndDateOfBirthAndIsActiveTrue(name, dto.dateOfBirth())) {
                 throw new IllegalArgumentException("A patient named '" + name + "' born on " + dto.dateOfBirth() + " is already registered.");
@@ -61,7 +67,23 @@ public class PatientService {
                 dto.nic()
         );
         patient.setDateOfBirth(dto.dateOfBirth());
-        patient.setGender(dto.gender());
+        
+        // Normalize Gender to single character 'M', 'F', or 'O' to prevent DB column truncation
+        if (dto.gender() != null && !dto.gender().trim().isEmpty()) {
+            String g = dto.gender().trim().toUpperCase();
+            if (g.startsWith("M")) {
+                patient.setGender("M");
+            } else if (g.startsWith("F")) {
+                patient.setGender("F");
+            } else {
+                patient.setGender("O");
+            }
+        } else {
+            patient.setGender(null);
+        }
+
+        patient.setRelationship(dto.relationship() != null && !dto.relationship().trim().isEmpty() ? dto.relationship().trim() : "Self");
+        patient.setMedicalHistory(dto.medicalHistory() != null ? dto.medicalHistory().trim() : null);
 
         // Save entity to database via Repository
         Patient saved = patientRepository.save(patient);
@@ -77,6 +99,23 @@ public class PatientService {
      */
     public List<PatientDTO> getAllActivePatients() {
         return patientRepository.findByIsActiveTrue()
+                .stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Searches active patients registered under a specific contact phone number (full or partial match).
+     * 
+     * @param phone Contact number query string
+     * @return List of PatientDTO records registered under the specified number
+     */
+    public List<PatientDTO> searchPatientsByPhone(String phone) {
+        if (phone == null || phone.trim().isEmpty()) {
+            return List.of();
+        }
+        String cleanPhone = phone.trim();
+        return patientRepository.findByContactNumberContainingAndIsActiveTrue(cleanPhone)
                 .stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
@@ -107,7 +146,9 @@ public class PatientService {
                 entity.getAddress(),
                 entity.getNic(),
                 entity.getDateOfBirth(),
-                entity.getGender()
+                entity.getGender(),
+                entity.getRelationship(),
+                entity.getMedicalHistory()
         );
     }
 }

@@ -53,6 +53,18 @@ public class PatientApiController {
     }
 
     /**
+     * GET /api/patients/search?phone={phone} - Search patients registered under a specific phone number.
+     * 
+     * @param phone Contact number
+     * @return 200 OK with list of matching PatientDTOs
+     */
+    @GetMapping("/search")
+    public ResponseEntity<List<PatientDTO>> searchPatientsByPhone(@RequestParam(name = "phone", required = false) String phone) {
+        List<PatientDTO> list = patientService.searchPatientsByPhone(phone);
+        return ResponseEntity.ok(list);
+    }
+
+    /**
      * GET /api/patients/{id} - Fetch a single patient by ID.
      * 
      * @param id Patient ID

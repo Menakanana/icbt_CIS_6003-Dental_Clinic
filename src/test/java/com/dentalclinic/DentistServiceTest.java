@@ -99,4 +99,27 @@ public class DentistServiceTest {
         assertEquals("Dr. Sarah Chen", result.getDentistName());
         assertEquals(30, result.getSlotDurationMinutes());
     }
+
+    @Test
+    @DisplayName("Unit Test: saveSchedule Past Date Throws IllegalArgumentException")
+    public void testSaveSchedule_PastDate_ThrowsException() {
+        DentistScheduleDTO inputDTO = new DentistScheduleDTO(1, LocalDate.now().minusDays(1), LocalTime.of(9, 0), LocalTime.of(17, 0), 30);
+        assertThrows(IllegalArgumentException.class, () -> dentistService.saveSchedule(inputDTO));
+    }
+
+    @Test
+    @DisplayName("Unit Test: saveSchedule Non-existent Dentist Throws Exception")
+    public void testSaveSchedule_InvalidDentist_ThrowsException() {
+        when(dentistRepository.findById(999)).thenReturn(Optional.empty());
+
+        DentistScheduleDTO inputDTO = new DentistScheduleDTO(999, LocalDate.now(), LocalTime.of(9, 0), LocalTime.of(17, 0), 30);
+        assertThrows(com.dentalclinic.exception.ResourceNotFoundException.class, () -> dentistService.saveSchedule(inputDTO));
+    }
+
+    @Test
+    @DisplayName("Unit Test: saveSchedule End Time Before Start Time Throws Exception")
+    public void testSaveSchedule_EndTimeBeforeStartTime_ThrowsException() {
+        DentistScheduleDTO inputDTO = new DentistScheduleDTO(1, LocalDate.now(), LocalTime.of(17, 0), LocalTime.of(9, 0), 30);
+        assertThrows(IllegalArgumentException.class, () -> dentistService.saveSchedule(inputDTO));
+    }
 }

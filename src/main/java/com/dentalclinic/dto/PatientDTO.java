@@ -1,5 +1,6 @@
 package com.dentalclinic.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.*;
 import java.time.LocalDate;
 
@@ -36,10 +37,14 @@ public class PatientDTO {
     private String nic;
 
     @Past(message = "Date of Birth must be a date in the past")
+    @JsonFormat(pattern = "dd/MM/yyyy")
     private LocalDate dateOfBirth;
 
     @Pattern(regexp = "^[MFO]$", message = "Gender must be 'M', 'F', or 'O'")
     private String gender;
+
+    private String relationship = "Self";
+    private String medicalHistory;
 
     public PatientDTO() {
     }
@@ -62,6 +67,19 @@ public class PatientDTO {
         this.nic = nic;
         this.dateOfBirth = dateOfBirth;
         this.gender = gender;
+    }
+
+    public PatientDTO(Integer patientId, String patientName, String contactNumber, String email, String address, String nic, LocalDate dateOfBirth, String gender, String relationship, String medicalHistory) {
+        this.patientId = patientId;
+        this.patientName = patientName;
+        this.contactNumber = contactNumber;
+        this.email = email;
+        this.address = address;
+        this.nic = nic;
+        this.dateOfBirth = dateOfBirth;
+        this.gender = gender;
+        this.relationship = relationship;
+        this.medicalHistory = medicalHistory;
     }
 
     // Standard JavaBeans Getters & Setters
@@ -89,6 +107,12 @@ public class PatientDTO {
     public String getGender() { return gender; }
     public void setGender(String gender) { this.gender = gender; }
 
+    public String getRelationship() { return relationship; }
+    public void setRelationship(String relationship) { this.relationship = relationship; }
+
+    public String getMedicalHistory() { return medicalHistory; }
+    public void setMedicalHistory(String medicalHistory) { this.medicalHistory = medicalHistory; }
+
     // Record-style accessor aliases
     public Integer patientId() { return patientId; }
     public String patientName() { return patientName; }
@@ -98,4 +122,6 @@ public class PatientDTO {
     public String nic() { return nic; }
     public LocalDate dateOfBirth() { return dateOfBirth; }
     public String gender() { return gender; }
+    public String relationship() { return relationship; }
+    public String medicalHistory() { return medicalHistory; }
 }

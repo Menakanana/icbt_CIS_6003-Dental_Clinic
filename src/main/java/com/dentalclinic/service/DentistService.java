@@ -111,6 +111,53 @@ public class DentistService {
     }
 
     /**
+     * Marks a Doctor OFF DUTY for a specific date and deactivates their shift schedule on that day.
+     */
+    @Transactional
+    public void markDoctorOffDuty(Integer dentistId, java.time.LocalDate scheduleDate) {
+        if (scheduleDate == null) {
+            throw new IllegalArgumentException("Schedule date is required.");
+        }
+        DentistSchedule schedule = scheduleRepository
+                .findFirstByDentist_DentistIdAndScheduleDate(dentistId, scheduleDate)
+                .orElseGet(() -> {
+                    Dentist dentist = dentistRepository.findById(dentistId)
+                            .orElseThrow(() -> new ResourceNotFoundException("Dentist not found with ID: " + dentistId));
+                    DentistSchedule s = new DentistSchedule();
+                    s.setDentist(dentist);
+                    s.setScheduleDate(scheduleDate);
+                    s.setSessionStartTime(java.time.LocalTime.of(9, 0));
+                    s.setSessionEndTime(java.time.LocalTime.of(17, 0));
+                    return s;
+                });
+        schedule.setIsActive(false);
+        scheduleRepository.save(schedule);
+    }
+
+    /**
+     * Fetches all shift schedules (active and off-duty) for a specific date.
+     */
+    public List<DentistScheduleDTO> getSchedulesForDate(java.time.LocalDate scheduleDate) {
+        if (scheduleDate == null) return List.of();
+        return scheduleRepository.findByScheduleDate(scheduleDate)
+                .stream()
+                .map(s -> {
+                    DentistScheduleDTO dto = new DentistScheduleDTO(
+                            s.getDentist().getDentistId(),
+                            s.getScheduleDate(),
+                            s.getSessionStartTime(),
+                            s.getSessionEndTime(),
+                            s.getSlotDurationMinutes());
+                    dto.setScheduleId(s.getScheduleId());
+                    dto.setDentistName(s.getDentist().getDentistName());
+                    dto.setMaxPatientsInSession(s.getMaxPatientsInSession());
+                    dto.setIsActive(s.getIsActive());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Fetches all active Doctor profiles.
      */
     public List<DentistDTO> getAllActiveDentists() {
@@ -137,6 +184,7 @@ public class DentistService {
                             s.getSlotDurationMinutes());
                     dto.setScheduleId(s.getScheduleId());
                     dto.setDentistName(s.getDentist().getDentistName());
+                    dto.setIsActive(s.getIsActive());
                     return dto;
                 })
                 .collect(Collectors.toList());

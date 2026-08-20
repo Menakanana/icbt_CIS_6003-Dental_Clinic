@@ -39,4 +39,39 @@ public class AuthApiController {
         AuthResponseDTO response = authService.authenticate(loginRequest);
         return ResponseEntity.ok(response);
     }
+
+    /**
+     * Handles Forgot Password / Password Reset via Email request.
+     * 
+     * Endpoint: POST /api/auth/forgot-password
+     * Request Body: { "email": "user@example.com" }
+     */
+    @PostMapping("/forgot-password")
+    public ResponseEntity<java.util.Map<String, String>> forgotPassword(@RequestBody java.util.Map<String, String> request) {
+        String emailOrUsername = request.get("email");
+        if (emailOrUsername == null || emailOrUsername.trim().isEmpty()) {
+            emailOrUsername = request.get("username");
+        }
+        String message = authService.processForgotPassword(emailOrUsername);
+        return ResponseEntity.ok(java.util.Map.of("message", message));
+    }
+
+    /**
+     * Handles Reset Password execution request.
+     * 
+     * Endpoint: POST /api/auth/reset-password
+     * Request Body: { "token": "RST-XXXXXX", "newPassword": "myNewPassword" }
+     */
+    @PostMapping("/reset-password")
+    public ResponseEntity<java.util.Map<String, Object>> resetPassword(@RequestBody java.util.Map<String, String> request) {
+        String token = request.get("token");
+        String newPassword = request.get("newPassword");
+
+        try {
+            boolean success = authService.resetPassword(token, newPassword);
+            return ResponseEntity.ok(java.util.Map.of("success", true, "message", "Your password has been reset successfully. You can now sign in."));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("success", false, "message", ex.getMessage()));
+        }
+    }
 }

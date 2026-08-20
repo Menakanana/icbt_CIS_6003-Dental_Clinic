@@ -142,4 +142,93 @@ public class PatientServiceTest {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> patientService.registerPatient(inputDto));
         assertTrue(ex.getMessage().contains("already registered"));
     }
+
+    @Test
+    @DisplayName("Scenario 7: Register Patient with Future Date of Birth Throws IllegalArgumentException")
+    public void testRegisterPatient_FutureDOB_ThrowsException() {
+        PatientDTO inputDto = new PatientDTO(null, "Future Baby", "0771234567", null, "123 Galle Rd", "", LocalDate.now().plusDays(10), "M");
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> patientService.registerPatient(inputDto));
+        assertTrue(ex.getMessage().contains("cannot be in the future"));
+    }
+
+    @Test
+    @DisplayName("Scenario 8: Get All Active Patients Returns Empty List When No Patients Exist")
+    public void testGetAllActivePatients_EmptyList() {
+        when(patientRepository.findByIsActiveTrue()).thenReturn(List.of());
+
+        List<PatientDTO> resultList = patientService.getAllActivePatients();
+
+        assertNotNull(resultList);
+        assertTrue(resultList.isEmpty());
+        verify(patientRepository, times(1)).findByIsActiveTrue();
+    }
+
+    @Test
+    @DisplayName("Scenario 9: Register Patient Without NIC Successfully")
+    public void testRegisterPatient_WithoutNIC_Success() {
+        PatientDTO inputDto = new PatientDTO(null, "Minor Child", "0771234567", null, "123 Galle Rd", null, LocalDate.of(2018, 3, 10), "F");
+
+        Patient savedPatient = new Patient("Minor Child", "0771234567", null, "123 Galle Rd", null);
+        savedPatient.setPatientId(103);
+        savedPatient.setDateOfBirth(LocalDate.of(2018, 3, 10));
+        savedPatient.setGender("F");
+
+        when(patientRepository.save(any(Patient.class))).thenReturn(savedPatient);
+
+        PatientDTO result = patientService.registerPatient(inputDto);
+
+        assertNotNull(result);
+        assertEquals(103, result.patientId());
+        assertEquals("Minor Child", result.patientName());
+    }
+
+    @Test
+    @DisplayName("Scenario 10: Register Patient With Empty NIC Handled Gracefully")
+    public void testRegisterPatient_EmptyNIC_Success() {
+        PatientDTO inputDto = new PatientDTO(null, "Walk-in Patient", "0779998888", "walkin@gmail.com", "Colombo", "", LocalDate.of(1985, 1, 1), "M");
+
+        when(patientRepository.save(any(Patient.class))).thenReturn(patient1);
+
+        PatientDTO result = patientService.registerPatient(inputDto);
+
+        assertNotNull(result);
+        verify(patientRepository, times(1)).save(any(Patient.class));
+    }
+
+    @Test
+    @DisplayName("Scenario 11: Register Multiple Family Members Sharing Same Phone Number - Success")
+    public void testRegisterPatient_MultipleFamilyMembersSamePhone_Success() {
+        PatientDTO childDto = new PatientDTO(null, "Sahan Perera", "0771234567", null, "123 Galle Rd", null, LocalDate.of(2015, 6, 12), "M", "Child", "Penicillin Allergy");
+
+        Patient childEntity = new Patient("Sahan Perera", "0771234567", null, "123 Galle Rd", null);
+        childEntity.setPatientId(104);
+        childEntity.setDateOfBirth(LocalDate.of(2015, 6, 12));
+        childEntity.setGender("M");
+        childEntity.setRelationship("Child");
+        childEntity.setMedicalHistory("Penicillin Allergy");
+
+        when(patientRepository.existsByPatientNameIgnoreCaseAndContactNumberAndIsActiveTrue("Sahan Perera", "0771234567")).thenReturn(false);
+        when(patientRepository.save(any(Patient.class))).thenReturn(childEntity);
+
+        PatientDTO result = patientService.registerPatient(childDto);
+
+        assertNotNull(result);
+        assertEquals(104, result.patientId());
+        assertEquals("Sahan Perera", result.patientName());
+        assertEquals("0771234567", result.contactNumber());
+        assertEquals("Child", result.relationship());
+        assertEquals("Penicillin Allergy", result.medicalHistory());
+    }
+
+    @Test
+    @DisplayName("Scenario 12: Register Duplicate Family Member with Same Name and Same Phone Throws Exception")
+    public void testRegisterPatient_DuplicateFamilyMemberSamePhone_ThrowsException() {
+        PatientDTO childDto = new PatientDTO(null, "Sahan Perera", "0771234567", null, "123 Galle Rd", null, LocalDate.of(2015, 6, 12), "M", "Child", "Penicillin Allergy");
+
+        when(patientRepository.existsByPatientNameIgnoreCaseAndContactNumberAndIsActiveTrue("Sahan Perera", "0771234567")).thenReturn(true);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> patientService.registerPatient(childDto));
+        assertTrue(ex.getMessage().contains("already exists"));
+    }
 }
