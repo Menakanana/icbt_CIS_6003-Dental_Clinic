@@ -56,12 +56,32 @@ public class DentistApiController {
     }
 
     /**
-     * POST /api/dentists/schedules - Configure day-by-day Doctor shift
-     * availability.
+     * POST /api/dentists/schedules - Configure day-by-day Doctor shift availability.
      */
     @PostMapping("/schedules")
     public ResponseEntity<DentistScheduleDTO> saveSchedule(@Valid @RequestBody DentistScheduleDTO scheduleDTO) {
         DentistScheduleDTO saved = dentistService.saveSchedule(scheduleDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+    }
+
+    /**
+     * POST /api/dentists/schedules/off-duty - Mark a Doctor OFF DUTY for a specific date.
+     */
+    @PostMapping("/schedules/off-duty")
+    public ResponseEntity<java.util.Map<String, Object>> markDoctorOffDuty(
+            @RequestParam("dentistId") Integer dentistId,
+            @RequestParam("scheduleDate") @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate scheduleDate) {
+        dentistService.markDoctorOffDuty(dentistId, scheduleDate);
+        return ResponseEntity.ok(java.util.Map.of("success", true, "message", "Doctor marked OFF DUTY for " + scheduleDate + "."));
+    }
+
+    /**
+     * GET /api/dentists/schedules/date - Fetch shift schedules for a specific date.
+     */
+    @GetMapping("/schedules/date")
+    public ResponseEntity<List<DentistScheduleDTO>> getSchedulesByDate(
+            @RequestParam("scheduleDate") @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate scheduleDate) {
+        List<DentistScheduleDTO> list = dentistService.getSchedulesForDate(scheduleDate);
+        return ResponseEntity.ok(list);
     }
 }

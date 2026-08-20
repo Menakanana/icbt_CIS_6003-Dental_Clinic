@@ -55,6 +55,14 @@ public class Patient {
     @Column(name = "NIC", length = 20)
     private String nic;
 
+    /** Family Relationship Tag (e.g. Self, Child, Spouse, Parent) */
+    @Column(name = "Relationship", length = 50)
+    private String relationship = "Self";
+
+    /** Known Medical Conditions & Allergies (e.g. Penicillin Allergy, Diabetics) */
+    @Column(name = "MedicalHistory", length = 500)
+    private String medicalHistory;
+
     /** Date and time when the patient was registered */
     @Column(name = "RegisteredDate")
     private LocalDateTime registeredDate;
@@ -144,6 +152,22 @@ public class Patient {
 
     public void setNic(String nic) {
         this.nic = nic;
+    }
+
+    public String getRelationship() {
+        return relationship;
+    }
+
+    public void setRelationship(String relationship) {
+        this.relationship = relationship;
+    }
+
+    public String getMedicalHistory() {
+        return medicalHistory;
+    }
+
+    public void setMedicalHistory(String medicalHistory) {
+        this.medicalHistory = medicalHistory;
     }
 
     public LocalDateTime getRegisteredDate() {

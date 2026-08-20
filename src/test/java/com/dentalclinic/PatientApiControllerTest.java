@@ -84,4 +84,14 @@ public class PatientApiControllerTest {
                 .andExpect(jsonPath("$.error").value("Not Found"))
                 .andExpect(jsonPath("$.message").value("Patient not found with ID: 99999"));
     }
+
+    @Test
+    @DisplayName("API Test: GET /api/patients/search?phone=0771234567 Returns Matching Patients (200 OK)")
+    public void testSearchPatientsByPhone_Success() throws Exception {
+        mockMvc.perform(get("/api/patients/search").param("phone", "0771234567"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].contactNumber").value("0771234567"));
+    }
 }

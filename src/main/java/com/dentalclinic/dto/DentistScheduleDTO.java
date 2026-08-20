@@ -1,5 +1,6 @@
 package com.dentalclinic.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -19,6 +20,7 @@ public class DentistScheduleDTO {
     private String dentistName;
 
     @NotNull(message = "Schedule date is required")
+    @JsonFormat(pattern = "dd/MM/yyyy")
     private LocalDate scheduleDate;
 
     @NotNull(message = "Session start time is required")
@@ -32,6 +34,8 @@ public class DentistScheduleDTO {
     @Min(value = 1, message = "Max patients in session must be at least 1")
     @Max(value = 100, message = "Max patients in session cannot exceed 100")
     private Integer maxPatientsInSession = 15;
+
+    private Boolean isActive = true;
 
     public DentistScheduleDTO() {
     }
@@ -68,4 +72,7 @@ public class DentistScheduleDTO {
 
     public Integer getMaxPatientsInSession() { return maxPatientsInSession; }
     public void setMaxPatientsInSession(Integer maxPatientsInSession) { this.maxPatientsInSession = maxPatientsInSession; }
+
+    public Boolean getIsActive() { return isActive; }
+    public void setIsActive(Boolean isActive) { this.isActive = isActive; }
 }
