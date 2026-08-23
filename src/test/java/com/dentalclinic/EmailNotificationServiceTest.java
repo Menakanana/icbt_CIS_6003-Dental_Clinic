@@ -77,4 +77,18 @@ public class EmailNotificationServiceTest {
         boolean result = emailNotificationService.sendBillingReceiptEmail(bill, "johndoe@gmail.com");
         assertTrue(result);
     }
+
+    @Test
+    @DisplayName("Unit Test: Send Password Reset Email Log Mode")
+    public void testSendPasswordResetEmail() {
+        boolean result = emailNotificationService.sendPasswordResetEmail("admin@sunrisedental.com", "System Admin", "RST-TEST999");
+        assertTrue(result);
+    }
+
+    @Test
+    @DisplayName("Unit Test: Send Booking Confirmation Email with Null Email Falls Back to Default")
+    public void testSendBookingConfirmationEmail_NullRecipient() {
+        boolean result = emailNotificationService.sendBookingConfirmationEmail(ticket, null);
+        assertTrue(result);
+    }
 }
