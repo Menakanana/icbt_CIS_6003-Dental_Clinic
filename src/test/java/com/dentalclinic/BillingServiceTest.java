@@ -30,6 +30,9 @@ public class BillingServiceTest {
     @Mock
     private AppointmentRepository appointmentRepository;
 
+    @Mock
+    private com.dentalclinic.repository.TreatmentTypeRepository treatmentTypeRepository;
+
     @InjectMocks
     private BillingService billingService;
 
@@ -77,9 +80,10 @@ public class BillingServiceTest {
         assertEquals(new BigDecimal("2500.00"), bill.getConsultationFee());
         assertEquals(new BigDecimal("500.00"), bill.getClinicCharge());
         assertEquals(new BigDecimal("5000.00"), bill.getTreatmentBaseCost());
-        assertEquals(new BigDecimal("500.00"), bill.getDiscountAmount());
-        // 2500 (consult) + 500 (clinic charge) + 5000 (treatment) - 500 (discount) = 7500.00
-        assertEquals(new BigDecimal("7500.00"), bill.getTotalAmount());
+        // 2500 (consult) + 500 (clinic charge) + 5000 (treatment) = 8000.00 Gross Total
+        assertEquals(new BigDecimal("8000.00"), bill.getTotalAmount());
+        // 8000 (gross) - 0 (prev paid) - 500 (discount) = 7500.00 Net Balance Due
+        assertEquals(new BigDecimal("7500.00"), bill.getNetBalanceDue());
     }
 
     @Test
@@ -90,5 +94,103 @@ public class BillingServiceTest {
         assertThrows(ResourceNotFoundException.class, () -> {
             billingService.calculateBill(999, BigDecimal.ZERO);
         });
+    }
+
+    @Test
+    @DisplayName("Unit Test: calculateBill Throws IllegalArgumentException for Negative Discount")
+    public void testCalculateBill_NegativeDiscount_ThrowsException() {
+        when(appointmentRepository.findById(1)).thenReturn(Optional.of(sampleAppointment));
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            billingService.calculateBill(1, new BigDecimal("-100.00"));
+        });
+    }
+
+    @Test
+    @DisplayName("Unit Test: calculateBill Zero Discount Returns Full Total Amount")
+    public void testCalculateBill_ZeroDiscount_ReturnsFullAmount() {
+        when(appointmentRepository.findById(1)).thenReturn(Optional.of(sampleAppointment));
+
+        BillingDTO bill = billingService.calculateBill(1, BigDecimal.ZERO);
+
+        assertNotNull(bill);
+        assertEquals(0, new BigDecimal("0.00").compareTo(bill.getDiscountAmount()));
+        // 2500 + 500 + 5000 - 0 = 8000.00
+        assertEquals(0, new BigDecimal("8000.00").compareTo(bill.getTotalAmount()));
+    }
+
+    @Test
+    @DisplayName("Unit Test: calculateBill Excessive Discount Capped at Zero (No Negative Bill)")
+    public void testCalculateBill_ExcessiveDiscount_CappedAtZero() {
+        when(appointmentRepository.findById(1)).thenReturn(Optional.of(sampleAppointment));
+
+        BigDecimal excessiveDiscount = new BigDecimal("20000.00");
+        BillingDTO bill = billingService.calculateBill(1, excessiveDiscount);
+
+        assertNotNull(bill);
+        assertTrue(bill.getTotalAmount().compareTo(BigDecimal.ZERO) >= 0);
+    }
+
+    @Test
+    @DisplayName("Unit Test: Verify Invoice Number is Generated Cleanly")
+    public void testCalculateBill_InvoiceNumberGenerated() {
+        when(appointmentRepository.findById(1)).thenReturn(Optional.of(sampleAppointment));
+
+        BillingDTO bill = billingService.calculateBill(1, BigDecimal.ZERO);
+
+        assertNotNull(bill.getInvoiceNumber());
+        assertTrue(bill.getInvoiceNumber() > 0);
+    }
+
+    @Test
+    @DisplayName("Unit Test: calculateBill Stage 1 Initial Deposit Returns Consultation Fee + Facility Charge Only")
+    public void testCalculateBill_InitialDepositStage_ReturnsConsultationAndClinicChargeOnly() {
+        when(appointmentRepository.findById(1)).thenReturn(Optional.of(sampleAppointment));
+
+        BillingDTO bill = billingService.calculateBill(1, BigDecimal.ZERO, "INITIAL_DEPOSIT", null, "Credit/Debit Card");
+
+        assertNotNull(bill);
+        assertEquals("INITIAL_DEPOSIT", bill.getBillStage());
+        assertEquals("Credit/Debit Card", bill.getPaymentMethod());
+        assertEquals(new BigDecimal("2500.00"), bill.getConsultationFee());
+        assertEquals(new BigDecimal("500.00"), bill.getClinicCharge());
+        assertEquals(BigDecimal.ZERO, bill.getTreatmentBaseCost());
+        // 2500 (consult) + 500 (clinic charge) = 3000.00
+        assertEquals(new BigDecimal("3000.00"), bill.getTotalAmount());
+    }
+
+    @Test
+    @DisplayName("Unit Test: calculateMultiProcedureBill Deducts Previous Paid Deposit and Marks Completed upon Settlement")
+    public void testCalculateMultiProcedureBill_SettlementSuccess() {
+        sampleAppointment.setPaidAmount(new BigDecimal("1500.00"));
+        sampleAppointment.setPaymentStatus("PAID_DEPOSIT");
+        when(appointmentRepository.findById(1)).thenReturn(Optional.of(sampleAppointment));
+
+        TreatmentType proc1 = new TreatmentType("Scaling & Polishing", "Deep cleaning", new BigDecimal("3500.00"));
+        proc1.setTreatmentTypeId(10);
+        TreatmentType proc2 = new TreatmentType("Fluoride Treatment", "Enamel protection", new BigDecimal("1500.00"));
+        proc2.setTreatmentTypeId(11);
+
+        when(treatmentTypeRepository.findById(10)).thenReturn(Optional.of(proc1));
+        when(treatmentTypeRepository.findById(11)).thenReturn(Optional.of(proc2));
+
+        BillingDTO bill = billingService.calculateMultiProcedureBill(
+                1,
+                java.util.List.of(10, 11),
+                new BigDecimal("500.00"),
+                "FINAL_SETTLED",
+                "Credit/Debit Card",
+                true
+        );
+
+        assertNotNull(bill);
+        assertEquals(2, bill.getTreatmentItems().size());
+        assertEquals(new BigDecimal("1500.00"), bill.getPreviousPaidAmount());
+        // Gross: 2500 (consult) + 500 (facility) + 3500 (proc1) + 1500 (proc2) = 8000.00
+        assertEquals(new BigDecimal("8000.00"), bill.getTotalAmount());
+        // Net due: 8000 - 1500 (prev paid) - 500 (discount) = 6000.00
+        assertEquals(new BigDecimal("6000.00"), bill.getNetBalanceDue());
+        assertEquals("FULL_PAID", sampleAppointment.getPaymentStatus());
+        assertEquals("COMPLETED", sampleAppointment.getStatus());
     }
 }
