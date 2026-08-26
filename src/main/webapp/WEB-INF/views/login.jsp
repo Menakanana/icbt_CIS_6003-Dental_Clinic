@@ -8,68 +8,6 @@
     <title>Sunrise Dental Clinic - Staff Login</title>
     <!-- External Shared Stylesheet -->
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/style.css">
-    <style>
-        .forgot-link-container {
-            text-align: center;
-            margin-top: 15px;
-        }
-        .forgot-link-container a {
-            color: #1F4E78;
-            font-size: 0.9rem;
-            text-decoration: none;
-            font-weight: 500;
-        }
-        .forgot-link-container a:hover {
-            text-decoration: underline;
-        }
-        /* Modal Styles */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-        .modal-card {
-            background: #ffffff;
-            padding: 28px;
-            border-radius: 10px;
-            width: 100%;
-            max-width: 420px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            position: relative;
-        }
-        .modal-card h3 {
-            margin-top: 0;
-            margin-bottom: 8px;
-            color: #1F4E78;
-            font-size: 1.25rem;
-        }
-        .modal-card p {
-            font-size: 0.9rem;
-            color: #555;
-            margin-bottom: 18px;
-        }
-        .modal-close-btn {
-            position: absolute;
-            top: 15px; right: 18px;
-            background: none; border: none;
-            font-size: 1.3rem; cursor: pointer;
-            color: #888;
-        }
-        .alert-info-custom {
-            padding: 10px 14px;
-            background-color: #e3f2fd;
-            color: #0d47a1;
-            border: 1px solid #bbdefb;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            margin-bottom: 15px;
-            display: none;
-        }
-    </style>
 </head>
 <body class="center-container">
 
@@ -110,7 +48,7 @@
 </div>
 
 <!-- Password Reset Modal -->
-<div id="forgotPasswordModal" class="modal-overlay">
+<div id="forgotPasswordModal" class="modal-overlay" style="display: none;">
     <div class="modal-card">
         <button class="modal-close-btn" onclick="closeForgotPasswordModal()">&times;</button>
         <h3>Reset Your Password</h3>

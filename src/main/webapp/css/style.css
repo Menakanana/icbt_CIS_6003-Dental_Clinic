@@ -1,7 +1,7 @@
 /* ==========================================================================
    Sunrise Dental Clinic - Master Professional Unified Stylesheet
    Theme: Modern Slate Navy & Mint Teal
-   Applies to: login.jsp, dashboard.jsp, booking.jsp, billing.jsp
+   Applies to: login.jsp, dashboard.jsp, booking.jsp, billing.jsp, ticket.jsp, receipt.jsp, admin-report-template.jsp
    ========================================================================== */
 
 :root {
@@ -132,6 +132,116 @@ body {
 }
 
 /* ==========================================================================
+   MODAL OVERLAYS & DIALOGS (login.jsp, ui-dialogs.jsp, booking-tab.jsp)
+   ========================================================================== */
+
+.modal-overlay,
+.custom-modal-overlay {
+    display: none;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(15, 23, 42, 0.6) !important;
+    backdrop-filter: blur(4px);
+    z-index: 99999 !important;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+    box-sizing: border-box;
+}
+
+.modal-card {
+    background: var(--card-bg);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    max-width: 480px;
+    width: 100%;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    border: 1px solid var(--border-color);
+}
+
+.modal-close-btn,
+.custom-modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    line-height: 1;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.modal-close-btn:hover,
+.custom-modal-close:hover {
+    background-color: #F1F5F9;
+    color: var(--text-dark);
+}
+
+.custom-modal-box {
+    background: #FFFFFF;
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 460px;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+}
+
+.custom-modal-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+}
+
+.custom-modal-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--text-dark);
+    font-weight: 600;
+}
+
+.custom-modal-body {
+    padding: 1.5rem;
+    font-size: 0.95rem;
+    color: var(--text-dark);
+}
+
+.custom-modal-footer {
+    padding: 1rem 1.5rem;
+    background: #F8FAFC;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+.forgot-link-container {
+    text-align: center;
+    margin-top: 1.25rem;
+}
+
+.forgot-link-container a {
+    color: var(--primary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.forgot-link-container a:hover {
+    text-decoration: underline;
+}
+
+/* ==========================================================================
    HEADER & DASHBOARD STYLING (dashboard.jsp)
    ========================================================================== */
 
@@ -194,6 +304,15 @@ body {
 .btn-logout:hover {
     background-color: #F1F5F9;
     color: var(--accent-red);
+}
+
+.btn-logout[style*="#EF4444"],
+.btn-logout[style*="EF4444"],
+.btn-logout[style*="background: #EF4444"],
+.btn-logout[style*="background-color: #EF4444"] {
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
+    border-color: #DC2626 !important;
 }
 
 /* Main Container */
@@ -529,4 +648,831 @@ body {
 .pagination-nav button:disabled {
     opacity: 0.45;
     cursor: not-allowed;
+}
+
+/* ==========================================================================
+   CUSTOM UI TOAST & MODAL DIALOG STYLING (Replaces browser alert/confirm/prompt)
+   ========================================================================== */
+
+.global-toast-container {
+    position: fixed;
+    top: 1.5rem;
+    right: 1.5rem;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-width: 420px;
+    pointer-events: none;
+}
+
+.global-toast {
+    pointer-events: auto;
+    background: #0F172A;
+    color: #FFFFFF;
+    padding: 0.9rem 1.25rem;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.15);
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.4;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-left: 5px solid #3B82F6;
+    animation: toastSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    transition: all 0.3s ease;
+}
+
+.global-toast.toast-success {
+    border-left-color: #10B981;
+}
+
+.global-toast.toast-error {
+    border-left-color: #EF4444;
+}
+
+.global-toast.toast-info {
+    border-left-color: #3B82F6;
+}
+
+.global-toast.toast-warning {
+    border-left-color: #F59E0B;
+}
+
+@keyframes toastSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100%) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+.custom-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 99998;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: modalFadeIn 0.2s ease-out;
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.custom-modal-box {
+    background: #FFFFFF;
+    width: 90%;
+    max-width: 440px;
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2), 0 8px 10px -6px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.custom-modal-header {
+    background: #F8FAFC;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #E2E8F0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.custom-modal-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0F172A;
+}
+
+.custom-modal-close {
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    color: #64748B;
+    cursor: pointer;
+}
+
+.custom-modal-close:hover {
+    color: #0F172A;
+}
+
+.custom-modal-body {
+    padding: 1.25rem;
+    font-size: 0.9rem;
+    color: #334155;
+    line-height: 1.5;
+}
+
+.custom-modal-footer {
+    padding: 0.75rem 1.25rem 1.25rem 1.25rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+.custom-modal-footer button {
+    padding: 0.5rem 1.25rem;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.custom-modal-footer .btn-cancel {
+    background: #F1F5F9;
+    color: #475569;
+    border: 1px solid #CBD5E1;
+}
+
+.custom-modal-footer .btn-cancel:hover {
+    background: #E2E8F0;
+}
+
+.custom-modal-footer .btn-confirm {
+    background: #2563EB;
+    color: #FFFFFF;
+    border: none;
+}
+
+.custom-modal-footer .btn-confirm:hover {
+    background: #1D4ED8;
+}
+
+.custom-modal-footer .btn-confirm.btn-danger {
+    background: #DC2626;
+}
+
+.custom-modal-footer .btn-confirm.btn-danger:hover {
+    background: #B91C1C;
+}
+
+/* ==========================================================================
+   SUPPLEMENTARY AUTH & MODAL STYLING (login.jsp & reset-password.jsp)
+   ========================================================================== */
+
+.forgot-link-container {
+    text-align: center;
+    margin-top: 15px;
+}
+
+.forgot-link-container a {
+    color: #1F4E78;
+    font-size: 0.9rem;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.forgot-link-container a:hover {
+    text-decoration: underline;
+}
+
+.modal-overlay {
+    display: none;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(15, 23, 42, 0.6) !important;
+    backdrop-filter: blur(4px);
+    align-items: center;
+    justify-content: center;
+    z-index: 99999 !important;
+}
+
+.modal-card {
+    background: #ffffff;
+    padding: 28px;
+    border-radius: 10px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    position: relative;
+}
+
+.modal-card h3 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    color: #1F4E78;
+    font-size: 1.25rem;
+}
+
+.modal-card p {
+    font-size: 0.9rem;
+    color: #555;
+    margin-bottom: 18px;
+}
+
+.modal-close-btn {
+    position: absolute;
+    top: 15px; right: 18px;
+    background: none; border: none;
+    font-size: 1.3rem; cursor: pointer;
+    color: #888;
+}
+
+.alert-info-custom {
+    padding: 10px 14px;
+    background-color: #e3f2fd;
+    color: #0d47a1;
+    border: 1px solid #bbdefb;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    margin-bottom: 15px;
+    display: none;
+}
+
+.password-toggle-btn {
+    position: absolute;
+    right: 10px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    padding: 2px;
+}
+
+.alert-custom {
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    margin-bottom: 18px;
+    display: none;
+}
+
+.rule-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.rule-item.valid {
+    color: #059669;
+    font-weight: 600;
+}
+
+.rule-item.invalid {
+    color: #94a3b8;
+}
+
+.rule-icon {
+    font-size: 0.9rem;
+}
+
+/* ==========================================================================
+   APPOINTMENT TICKET & QUEUE PASS STYLING (ticket.jsp)
+   ========================================================================== */
+
+.ticket-page-body {
+    background-color: #F8FAFC;
+    padding: 2rem 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100vh;
+    box-sizing: border-box;
+}
+
+.ticket-container {
+    background: #FFFFFF;
+    border: 2px dashed var(--primary);
+    border-radius: 12px;
+    padding: 2.5rem;
+    max-width: 520px;
+    width: 100%;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    box-sizing: border-box;
+}
+
+.ticket-container .header {
+    text-align: center;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.ticket-container .header h1 {
+    color: var(--primary);
+    margin: 0;
+    font-size: 1.6rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.ticket-container .header p {
+    margin: 0.25rem 0 0 0;
+    font-size: 0.85rem;
+    color: #64748B;
+}
+
+.token-badge {
+    background-color: #ECFDF5;
+    border: 2px solid #A7F3D0;
+    color: #065F46;
+    text-align: center;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+}
+
+.token-badge .token-num {
+    font-size: 2.5rem;
+    font-weight: 800;
+    line-height: 1;
+    margin: 0.25rem 0;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+}
+
+.info-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: #64748B;
+    font-weight: 600;
+}
+
+.info-value {
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-top: 0.15rem;
+}
+
+.fee-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+}
+
+.fee-table th,
+.fee-table td {
+    padding: 0.6rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.fee-table td:last-child {
+    text-align: right;
+    font-weight: 600;
+}
+
+.ticket-actions {
+    text-align: center;
+    margin-top: 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+    align-items: center;
+    max-width: 520px;
+    width: 100%;
+}
+
+.btn-action {
+    background-color: var(--primary);
+    color: #FFFFFF;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.88rem;
+    text-decoration: none;
+}
+
+/* ==========================================================================
+   BILLING RECEIPT STYLING (receipt.jsp)
+   ========================================================================== */
+
+.receipt-page-body {
+    background-color: #F1F5F9;
+    padding: 2rem 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100vh;
+    box-sizing: border-box;
+}
+
+.receipt-card {
+    max-width: 650px;
+    width: 100%;
+    margin: 0 auto;
+    background: #FFFFFF;
+    padding: 2.5rem;
+    border-radius: var(--radius-md);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-color);
+    box-sizing: border-box;
+}
+
+.receipt-header {
+    text-align: center;
+    border-bottom: 2px dashed var(--border-color);
+    padding-bottom: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.receipt-header h1 {
+    color: var(--primary);
+    font-size: 1.6rem;
+    margin-bottom: 0.25rem;
+}
+
+.receipt-header p {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.invoice-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+}
+
+.itemized-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+}
+
+.itemized-table th, .itemized-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9rem;
+}
+
+.itemized-table th {
+    background-color: #F8FAFC;
+    color: var(--primary);
+}
+
+.total-row td {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--primary);
+}
+
+.receipt-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+    max-width: 650px;
+    width: 100%;
+}
+
+.status-toast-box {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    display: none;
+    text-align: center;
+    max-width: 650px;
+    width: 100%;
+}
+
+/* ==========================================================================
+   ADMINISTRATIVE PRINTABLE REPORTS SUITE STYLING (admin-report-template.jsp)
+   ========================================================================== */
+
+.report-page-body {
+    background-color: #F8FAFC;
+    padding: 2rem 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100vh;
+    box-sizing: border-box;
+}
+
+.report-card {
+    max-width: 1050px;
+    width: 100%;
+    margin: 0 auto;
+    background: #FFFFFF;
+    padding: 2.5rem;
+    border-radius: var(--radius-md, 8px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--border-color, #E2E8F0);
+    box-sizing: border-box;
+}
+
+.report-letterhead {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 2px solid #0F172A;
+    padding-bottom: 1.25rem;
+    margin-bottom: 1.75rem;
+}
+
+.clinic-brand h1 {
+    color: #0F172A;
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin: 0 0 0.25rem 0;
+    letter-spacing: -0.02em;
+}
+
+.clinic-brand p {
+    color: #64748B;
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+.report-meta-box {
+    text-align: right;
+}
+
+.report-meta-box .report-badge {
+    display: inline-block;
+    background-color: #0284C7;
+    color: #FFFFFF;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.35rem 0.75rem;
+    border-radius: 9999px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+}
+
+.report-meta-box p {
+    font-size: 0.825rem;
+    color: #475569;
+    margin: 0.15rem 0;
+}
+
+.report-title-section {
+    margin-bottom: 1.75rem;
+}
+
+.report-title-section h2 {
+    font-size: 1.4rem;
+    color: #1E293B;
+    font-weight: 700;
+    margin: 0 0 0.35rem 0;
+}
+
+.report-title-section p {
+    font-size: 0.9rem;
+    color: #64748B;
+    margin: 0;
+}
+
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+}
+
+.kpi-card {
+    background-color: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    padding: 1.25rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+
+.kpi-card .kpi-label {
+    font-size: 0.775rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748B;
+    margin-bottom: 0.35rem;
+}
+
+.kpi-card .kpi-value {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #0F172A;
+    margin-bottom: 0.25rem;
+}
+
+.kpi-card .kpi-subtext {
+    font-size: 0.8rem;
+    color: #94A3B8;
+}
+
+.report-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    margin-bottom: 1.5rem;
+}
+
+.report-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+    text-align: left;
+}
+
+.report-table th {
+    background-color: #0F172A;
+    color: #FFFFFF;
+    font-weight: 600;
+    padding: 0.75rem 1rem;
+    border: 1px solid #0F172A;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+}
+
+.report-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #E2E8F0;
+    color: #334155;
+}
+
+.report-table tr:nth-child(even) {
+    background-color: #F8FAFC;
+}
+
+.report-table tr.highlight-row {
+    background-color: #FEF3C7;
+}
+
+.report-table tfoot td {
+    background-color: #F1F5F9;
+    font-weight: 800;
+    color: #0F172A;
+    border-top: 2px solid #0F172A;
+    border-bottom: 2px solid #0F172A;
+    padding: 0.85rem 1rem;
+}
+
+.status-pill {
+    display: inline-block;
+    padding: 0.25rem 0.6rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.status-pill.COMPLETED { background-color: #D1FAE5; color: #065F46; }
+.status-pill.BOOKED { background-color: #DBEAFE; color: #1E40AF; }
+.status-pill.CANCELLED { background-color: #FEE2E2; color: #991B1B; }
+.status-pill.RESCHEDULED { background-color: #FEF3C7; color: #92400E; }
+
+.report-footer-notes {
+    margin-top: 2rem;
+    padding-top: 1.25rem;
+    border-top: 1px dashed #CBD5E1;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: #64748B;
+}
+
+.print-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    max-width: 1050px;
+    width: 100%;
+}
+
+/* ==========================================================================
+   PRINTABLE REPORTS CENTER STYLING (admin-reports-tab.jsp)
+   ========================================================================== */
+
+.reports-center-card {
+    margin-bottom: 1.5rem;
+    background-color: #F8FAFC;
+    border: 1px solid #CBD5E1;
+}
+
+.reports-date-bar {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.reports-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.25rem;
+}
+
+.report-select-card {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.report-card-badge {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+}
+
+.report-card-title {
+    margin: 0 0 0.4rem 0;
+    color: #0F172A;
+    font-size: 1.05rem;
+}
+
+.report-card-desc {
+    font-size: 0.825rem;
+    color: #64748B;
+    margin-bottom: 1rem;
+}
+
+/* ==========================================================================
+   GLOBAL PRINT MEDIA STYLING (@media print)
+   ========================================================================== */
+
+@media print {
+    @page {
+        size: portrait;
+        margin: 10mm;
+    }
+    html, body {
+        background: #FFFFFF !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        display: block !important;
+        width: 100% !important;
+        height: auto !important;
+        min-height: 0 !important;
+    }
+    .ticket-container {
+        border: 2px dashed #0F766E !important;
+        box-shadow: none !important;
+        margin: 0 auto !important;
+        padding: 1.5rem !important;
+        max-width: 520px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        page-break-inside: avoid !important;
+    }
+    .receipt-card {
+        box-shadow: none !important;
+        border: 1px solid #CBD5E1 !important;
+        padding: 1.5rem !important;
+        width: 100% !important;
+        max-width: 650px !important;
+        margin: 0 auto !important;
+        box-sizing: border-box !important;
+        page-break-inside: avoid !important;
+    }
+    .report-card {
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    .print-actions, .ticket-actions, .receipt-actions, .status-toast, .status-toast-box, header, footer, nav {
+        display: none !important;
+    }
 }

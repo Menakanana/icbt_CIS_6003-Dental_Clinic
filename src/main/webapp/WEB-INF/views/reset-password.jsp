@@ -8,35 +8,6 @@
     <title>Sunrise Dental Clinic - Reset Password</title>
     <!-- External Shared Stylesheet -->
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/style.css">
-    <style>
-        .password-toggle-btn {
-            position: absolute; right: 10px; background: none; border: none;
-            cursor: pointer; font-size: 1.1rem; color: var(--text-muted); padding: 2px;
-        }
-        .alert-custom {
-            padding: 12px 16px;
-            border-radius: 6px;
-            font-size: 0.9rem;
-            margin-bottom: 18px;
-            display: none;
-        }
-        .rule-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.2s ease;
-        }
-        .rule-item.valid {
-            color: #059669;
-            font-weight: 600;
-        }
-        .rule-item.invalid {
-            color: #94a3b8;
-        }
-        .rule-icon {
-            font-size: 0.9rem;
-        }
-    </style>
 </head>
 <body class="center-container">
 

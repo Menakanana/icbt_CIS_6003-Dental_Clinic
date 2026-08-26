@@ -179,7 +179,7 @@
             <table class="data-table" id="confirmedAppointmentsTable">
                 <thead>
                     <tr>
-                        <th>Appt No.</th>
+                        <th>Appointment No.</th>
                         <th>Token #</th>
                         <th>Date</th>
                         <th>Time Window</th>
@@ -193,7 +193,7 @@
                 <tbody id="confirmedAppointmentsTbody">
                     <c:forEach items="${todayAppointments}" var="app">
                         <tr>
-                            <td><strong>APT-<c:out value="${app.appointmentId}"/></strong></td>
+                            <td><strong><c:out value="${app.appointmentId}"/></strong></td>
                             <td><strong>#<c:out value="${app.tokenNumber}"/></strong></td>
                             <td><c:out value="${app.formattedAppointmentDate}"/></td>
                             <td><c:out value="${app.displayTimeRange}"/></td>
@@ -208,7 +208,16 @@
                             <td><span class="badge badge-receptionist"><c:out value="${app.status}"/></span></td>
                             <td>
                                 <a href="${pageContext.request.contextPath}/booking/ticket/${app.appointmentId}" target="_blank" class="btn-primary" style="padding: 0.25rem 0.6rem; font-size: 0.75rem; text-decoration: none;">🖨️ Print Ticket</a>
-                                <button type="button" class="btn-logout" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-left: 0.3rem;" onclick="openRescheduleModal(${app.appointmentId}, '${app.patientName}', '${app.formattedAppointmentDate}')">🔄 Reschedule</button>
+                                <c:set var="isClosedStatus" value="${app.status eq 'COMPLETED' or app.status eq 'CLOSED' or app.status eq 'CANCELLED'}" />
+                                <c:set var="isPaidDeposit" value="${not empty app.paidAmount and app.paidAmount > 0 or app.paymentStatus eq 'PAID_DEPOSIT' or app.paymentStatus eq 'FULL_PAID'}" />
+                                <c:choose>
+                                    <c:when test="${not isClosedStatus}">
+                                        <button type="button" class="btn-logout" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-left: 0.3rem;" onclick="openRescheduleModal(${app.appointmentId}, '<c:out value="${app.patientName}"/>', '<c:out value="${app.formattedAppointmentDate}"/>', ${app.dentistId})">🔄 Reschedule</button>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <button type="button" class="btn-logout" disabled style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-left: 0.3rem; opacity: 0.4; cursor: not-allowed;" title="Cannot reschedule <c:out value="${app.status}"/> appointment">🔒 Reschedule</button>
+                                    </c:otherwise>
+                                </c:choose>
                             </td>
                         </tr>
                     </c:forEach>
@@ -225,20 +234,38 @@
 
 <!-- Reschedule Appointment Modal -->
 <div id="rescheduleModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center;">
-    <div class="modal-card" style="background: #FFF; padding: 2rem; border-radius: 12px; max-width: 450px; width: 90%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+    <div class="modal-card" style="background: #FFF; padding: 2rem; border-radius: 12px; max-width: 550px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
         <h3 style="color: var(--primary); margin-bottom: 0.5rem;">🔄 Reschedule Patient Appointment</h3>
-        <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1.25rem;" id="rescheduleModalSubtitle">Select new appointment date and start time.</p>
+        <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1.25rem;" id="rescheduleModalSubtitle">Select dentist, date, and available time slot.</p>
         
         <input type="hidden" id="rescheduleAppId">
+        <input type="hidden" id="rescheduleSelectedStartTime">
+        <input type="hidden" id="rescheduleSelectedToken">
 
         <div class="form-group" style="margin-bottom: 1rem;">
-            <label>New Appointment Date *</label>
-            <input type="date" id="rescheduleDateInput" class="form-control" required>
+            <label style="font-weight: 600;">Select Dentist *</label>
+            <select id="rescheduleDentistSelect" class="form-control" onchange="onRescheduleSelectionChange()">
+                <c:forEach items="${dentists}" var="d">
+                    <option value="${d.dentistId}" data-fee="${d.consultationFee}"><c:out value="${d.dentistName}"/> (<c:out value="${d.specialization}"/>) - LKR <fmt:formatNumber value="${d.consultationFee}" type="currency" currencySymbol=""/></option>
+                </c:forEach>
+            </select>
         </div>
 
-        <div class="form-group" style="margin-bottom: 1.5rem;">
-            <label>New Start Time *</label>
-            <input type="time" id="rescheduleTimeInput" class="form-control" value="09:30" required>
+        <div class="form-group" style="margin-bottom: 1rem;">
+            <label style="font-weight: 600;">New Appointment Date *</label>
+            <input type="date" id="rescheduleDateInput" class="form-control" required onchange="onRescheduleSelectionChange()" oninput="onRescheduleSelectionChange()">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+            <label style="font-weight: 600; display: block; margin-bottom: 0.4rem;">Available Time Slots & Queue Tokens *</label>
+            <div id="rescheduleSlotsContainer" class="slots-container" style="max-height: 180px; overflow-y: auto; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background-color: #FAFAFA;">
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0.5rem 0;">Loading available time slots...</p>
+            </div>
+            <span id="rescheduleSlotErrorMsg" class="field-error-msg" style="display:none;"></span>
+        </div>
+
+        <div id="rescheduleFeeNotice" style="background-color: #ECFDF5; border: 1px solid #A7F3D0; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.82rem; color: #065F46; display: none;">
+            <strong>💡 Consultation Fee:</strong> <span id="rescheduleFeeText">LKR 0.00</span> (Any fee variance will be adjusted on final billing receipt).
         </div>
 
         <div id="rescheduleFeedback" class="field-error-msg" style="display: none; margin-bottom: 1rem;"></div>
@@ -292,7 +319,17 @@
                 let html = '';
                 list.forEach(app => {
                     const alertTag = app.medicalHistory ? '<br><span style="display: inline-block; margin-top: 0.2rem; padding: 0.15rem 0.4rem; background-color: #FEE2E2; color: #991B1B; border: 1px solid #FECACA; border-radius: 4px; font-size: 0.72rem; font-weight: 600;">⚠️ Alert: ' + escapeHtml(app.medicalHistory) + '</span>' : '';
-                    const apptNo = 'APT-' + (app.appointmentId || app.appointmentNumber || '');
+                    const apptNo = (app.appointmentId || app.appointmentNumber || '');
+                    const statusUpper = (app.status || 'BOOKED').toUpperCase();
+                    const isClosedStatus = (statusUpper === 'COMPLETED' || statusUpper === 'CLOSED' || statusUpper === 'CANCELLED');
+                    const isPaidDeposit = (app.paidAmount && parseFloat(app.paidAmount) > 0) || (app.paymentStatus === 'PAID_DEPOSIT' || app.paymentStatus === 'FULL_PAID');
+                    
+                    const isReschedulable = !isClosedStatus;
+
+                    const rescheduleBtnHtml = isReschedulable
+                        ? '<button type="button" class="btn-logout" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-left: 0.3rem;" onclick="openRescheduleModal(' + app.appointmentId + ', \'' + escapeHtml(app.patientName) + '\', \'' + app.appointmentDate + '\', ' + app.dentistId + ')">🔄 Reschedule</button>'
+                        : '<button type="button" class="btn-logout" disabled style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-left: 0.3rem; opacity: 0.4; cursor: not-allowed;" title="Cannot reschedule ' + escapeHtml(app.status || '') + ' appointment">🔒 Reschedule</button>';
+
                     html += 
                         '<tr>' +
                             '<td><strong>' + apptNo + '</strong></td>' +
@@ -305,7 +342,7 @@
                             '<td><span class="badge badge-receptionist">' + escapeHtml(app.status || 'BOOKED') + '</span></td>' +
                             '<td>' +
                                 '<a href="${pageContext.request.contextPath}/booking/ticket/' + app.appointmentId + '" target="_blank" class="btn-primary" style="padding: 0.25rem 0.6rem; font-size: 0.75rem; text-decoration: none;">🖨️ Print Ticket</a>' +
-                                '<button type="button" class="btn-logout" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-left: 0.3rem;" onclick="openRescheduleModal(' + app.appointmentId + ', \'' + escapeHtml(app.patientName) + '\', \'' + app.appointmentDate + '\')">🔄 Reschedule</button>' +
+                                rescheduleBtnHtml +
                             '</td>' +
                         '</tr>';
                 });
@@ -322,43 +359,131 @@
         }
     }
 
-    function openRescheduleModal(appId, patientName, dateStr) {
+    function openRescheduleModal(appId, patientName, dateStr, dentistId) {
         document.getElementById('rescheduleAppId').value = appId;
         document.getElementById('rescheduleModalSubtitle').innerText = 'Rescheduling appointment for ' + patientName + ' (APT-#' + appId + ')';
+        
+        const dentistSelect = document.getElementById('rescheduleDentistSelect');
+        if (dentistSelect && dentistId) {
+            dentistSelect.value = dentistId;
+        }
+
         const dateInput = document.getElementById('rescheduleDateInput');
         dateInput.value = dateStr || getLocalDateString();
         dateInput.min = getLocalDateString();
+
+        document.getElementById('rescheduleSelectedStartTime').value = '';
+        document.getElementById('rescheduleSelectedToken').value = '';
         document.getElementById('rescheduleFeedback').style.display = 'none';
+        
         document.getElementById('rescheduleModal').style.display = 'flex';
+
+        onRescheduleSelectionChange();
     }
 
     function closeRescheduleModal() {
         document.getElementById('rescheduleModal').style.display = 'none';
     }
 
+    function onRescheduleSelectionChange() {
+        const dentistId = document.getElementById('rescheduleDentistSelect').value;
+        const dateVal = document.getElementById('rescheduleDateInput').value;
+        const container = document.getElementById('rescheduleSlotsContainer');
+        const feeNotice = document.getElementById('rescheduleFeeNotice');
+        const feeText = document.getElementById('rescheduleFeeText');
+
+        document.getElementById('rescheduleSelectedStartTime').value = '';
+        document.getElementById('rescheduleSelectedToken').value = '';
+
+        const dentistSelect = document.getElementById('rescheduleDentistSelect');
+        if (dentistSelect && dentistSelect.selectedIndex >= 0) {
+            const opt = dentistSelect.options[dentistSelect.selectedIndex];
+            const fee = opt ? opt.getAttribute('data-fee') : null;
+            if (fee && feeNotice && feeText) {
+                feeText.innerText = 'LKR ' + parseFloat(fee).toFixed(2);
+                feeNotice.style.display = 'block';
+            }
+        }
+
+        if (!dentistId || !dateVal) {
+            container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem;">Select dentist and date to view time slots.</p>';
+            return;
+        }
+
+        container.innerHTML = '<p style="color: var(--primary); font-size: 0.85rem;">🔍 Querying live doctor shift availability...</p>';
+
+        fetch('${pageContext.request.contextPath}/api/slots/available?dentistId=' + dentistId + '&date=' + dateVal)
+            .then(res => {
+                if(!res.ok) throw new Error('HTTP ' + res.status);
+                return res.json();
+            })
+            .then(slots => {
+                if (!slots || slots.length === 0) {
+                    container.innerHTML = '<p style="color: #991B1B; background-color: #FEE2E2; border: 1px solid #FECACA; padding: 0.5rem; border-radius: 4px; font-size: 0.82rem;">⚠️ Selected doctor is off-duty or has no shift scheduled on ' + dateVal + '.</p>';
+                    return;
+                }
+
+                let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 0.5rem;">';
+                slots.forEach(slot => {
+                    const isAvailable = (slot.available !== undefined) ? slot.available : slot.isAvailable;
+                    const timeText = slot.displayTime || slot.displayTimeRange || '';
+                    const availableClass = isAvailable ? 'btn-primary' : 'btn-logout';
+                    const disabledAttr = isAvailable ? '' : 'disabled style="opacity: 0.5; cursor: not-allowed; text-decoration: line-through;"';
+                    
+                    html += '<button type="button" class="' + availableClass + ' reschedule-slot-btn" ' + disabledAttr +
+                            ' style="font-size: 0.8rem; font-weight: 700; padding: 0.5rem 0.3rem; width: 100%;" ' +
+                            ' onclick="selectRescheduleSlot(this, \'' + slot.startTime + '\', ' + slot.tokenNumber + ')">' +
+                            'Token #' + slot.tokenNumber +
+                            '</button>';
+                });
+                html += '</div>';
+                container.innerHTML = html;
+            })
+            .catch(err => {
+                container.innerHTML = '<p style="color: var(--accent-red); font-size: 0.85rem;">Unable to load time slots (' + err.message + ').</p>';
+            });
+    }
+
+    function selectRescheduleSlot(btn, startTime, tokenNumber) {
+        document.querySelectorAll('.reschedule-slot-btn').forEach(b => {
+            b.style.border = 'none';
+            b.style.boxShadow = 'none';
+        });
+        btn.style.border = '2px solid #047857';
+        btn.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.3)';
+
+        document.getElementById('rescheduleSelectedStartTime').value = startTime;
+        document.getElementById('rescheduleSelectedToken').value = tokenNumber;
+        document.getElementById('rescheduleFeedback').style.display = 'none';
+    }
+
     async function submitReschedule() {
         const appId = document.getElementById('rescheduleAppId').value;
+        const dentistId = document.getElementById('rescheduleDentistSelect').value;
         const newDate = document.getElementById('rescheduleDateInput').value;
-        const newTime = document.getElementById('rescheduleTimeInput').value;
+        const startTime = document.getElementById('rescheduleSelectedStartTime').value;
+        const tokenNumber = document.getElementById('rescheduleSelectedToken').value;
         const feedback = document.getElementById('rescheduleFeedback');
 
-        if (!newDate || !newTime) {
-            feedback.innerText = "⚠️ Please select a valid date and time.";
+        if (!newDate || !startTime) {
+            feedback.innerText = "⚠️ Please select a date and click an available time slot pill above.";
             feedback.style.display = 'block';
             return;
         }
 
         try {
-            const resp = await fetch('${pageContext.request.contextPath}/api/appointments/' + appId + '/reschedule?date=' + newDate + '&startTime=' + newTime, {
+            const resp = await fetch('${pageContext.request.contextPath}/api/appointments/' + appId + '/reschedule?dentistId=' + dentistId + '&date=' + newDate + '&startTime=' + startTime + '&tokenNumber=' + tokenNumber, {
                 method: 'POST'
             });
             if (resp.ok) {
+                const updatedTicket = await resp.json();
                 closeRescheduleModal();
+                showToast('✅ Appointment APT-#' + appId + ' successfully rescheduled to ' + (updatedTicket.appointmentDate || newDate) + ' (Token #' + (updatedTicket.tokenNumber || tokenNumber) + ') with ' + (updatedTicket.dentistName || 'Doctor') + '!', 'success', 5000);
                 const currentDate = document.getElementById('confirmedAppDatePicker').value;
                 loadConfirmedAppointmentsByDate(currentDate || getLocalDateString());
             } else {
                 const errText = await resp.text();
-                feedback.innerText = "⚠️ Unable to reschedule (" + (errText || "Slot unavailable") + ").";
+                feedback.innerText = "⚠️ Unable to reschedule (" + (errText || "Slot no longer available") + ").";
                 feedback.style.display = 'block';
             }
         } catch (e) {

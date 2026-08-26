@@ -7,9 +7,11 @@
     
     <!-- Register / Configure Doctor Profile Form -->
     <div class="card-panel" style="margin-bottom: 1.5rem; background-color: #F8FAFC; border: 1px solid var(--border-color);">
-        <h3 style="margin-bottom: 1rem; color: var(--primary); font-size: 1.1rem;">🩺 Register / Add New Doctor Profile</h3>
+        <h3 id="doctorFormTitle" style="margin-bottom: 1rem; color: var(--primary); font-size: 1.1rem;">🩺 Register / Add New Doctor Profile</h3>
         
         <form action="${pageContext.request.contextPath}/dentists/save" method="post" id="doctorForm" onsubmit="return validateDoctorForm()">
+            <input type="hidden" name="dentistId" id="docDentistId" value="">
+            
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
                 <div class="form-group">
                     <label>Doctor Full Name *</label>
@@ -33,7 +35,8 @@
                 </div>
             </div>
             <div style="margin-top: 1rem; text-align: right;">
-                <button type="submit" class="btn-primary" style="padding: 0.6rem 1.5rem;">Save Doctor Profile</button>
+                <button type="button" id="docCancelBtn" class="btn-logout" style="display:none; padding: 0.6rem 1.5rem; margin-right: 0.5rem;" onclick="cancelDoctorEdit()">Cancel Edit</button>
+                <button type="submit" id="docSubmitBtn" class="btn-primary" style="padding: 0.6rem 1.5rem;">Save Doctor Profile</button>
             </div>
         </form>
     </div>
@@ -51,6 +54,7 @@
                         <th>Contact Number</th>
                         <th>Consultation Fee</th>
                         <th>Status</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -62,11 +66,15 @@
                             <td><c:out value="${d.contactNumber}"/></td>
                             <td>LKR <fmt:formatNumber value="${d.consultationFee}" type="currency" currencySymbol=""/></td>
                             <td><span class="badge badge-admin">Active</span></td>
+                            <td>
+                                <button type="button" class="btn-primary" style="padding: 0.25rem 0.6rem; font-size: 0.75rem;" onclick="editDoctor(${d.dentistId}, '<c:out value="${d.dentistName}"/>', '<c:out value="${d.specialization}"/>', ${d.consultationFee}, '<c:out value="${d.contactNumber}"/>')">✏️ Edit</button>
+                                <button type="button" class="btn-logout" style="padding: 0.25rem 0.6rem; font-size: 0.75rem; margin-left: 0.4rem; background-color: #FEE2E2; color: #991B1B; border: 1px solid #FECACA;" onclick="confirmDeleteDoctor(${d.dentistId}, '<c:out value="${d.dentistName}"/>')">🗑️ Delete</button>
+                            </td>
                         </tr>
                     </c:forEach>
                     <c:if test="${empty dentists}">
                         <tr>
-                            <td colspan="6" style="text-align: center; color: var(--text-muted);">No doctors configured.</td>
+                            <td colspan="7" style="text-align: center; color: var(--text-muted);">No doctors configured.</td>
                         </tr>
                     </c:if>
                 </tbody>
@@ -139,5 +147,36 @@
         if (!validateDocFee()) valid = false;
         if (!validateDocPhone()) valid = false;
         return valid;
+    }
+
+    function editDoctor(id, name, spec, fee, phone) {
+        document.getElementById('docDentistId').value = id;
+        document.getElementById('docName').value = name || '';
+        document.getElementById('docSpec').value = spec || '';
+        document.getElementById('docFee').value = fee || '';
+        document.getElementById('docPhone').value = phone || '';
+
+        document.getElementById('doctorFormTitle').innerText = '✏️ Edit Doctor Profile (ID #' + id + ')';
+        document.getElementById('docSubmitBtn').innerText = 'Update Doctor Profile';
+        document.getElementById('docCancelBtn').style.display = 'inline-block';
+
+        const form = document.getElementById('doctorForm');
+        if (form) form.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function cancelDoctorEdit() {
+        document.getElementById('docDentistId').value = '';
+        document.getElementById('doctorForm').reset();
+        document.getElementById('doctorFormTitle').innerText = '🩺 Register / Add New Doctor Profile';
+        document.getElementById('docSubmitBtn').innerText = 'Save Doctor Profile';
+        document.getElementById('docCancelBtn').style.display = 'none';
+    }
+
+    function confirmDeleteDoctor(id, name) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '${pageContext.request.contextPath}/dentists/delete/' + id;
+        document.body.appendChild(form);
+        form.submit();
     }
 </script>

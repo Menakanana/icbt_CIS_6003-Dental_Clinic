@@ -74,6 +74,9 @@
     <!-- Help Modal Component -->
     <jsp:include page="components/help-modal.jsp"/>
 
+    <!-- UI Dialogs Component (Toasts & Custom Modals) -->
+    <jsp:include page="components/ui-dialogs.jsp"/>
+
 </div>
 
 <!-- Global Client-Side Scripts -->
@@ -212,11 +215,11 @@
                 slots.forEach(s => {
                     if(s.isAvailable) {
                         html += '<button type="button" class="slot-btn available" onclick="selectSlot(\'' + s.startTime + '\', \'' + s.displayTime + '\', ' + s.tokenNumber + ', this)">' +
-                                '#' + s.tokenNumber + '<br>' + s.displayTime +
+                                'Token #' + s.tokenNumber +
                                 '</button>';
                     } else {
                         html += '<button type="button" class="slot-btn disabled" disabled title="Booked">' +
-                                '#' + s.tokenNumber + '<br>' + s.displayTime +
+                                'Token #' + s.tokenNumber +
                                 '</button>';
                     }
                 });
@@ -470,6 +473,14 @@
         if (document.getElementById('quickPhone')) document.getElementById('formQuickPhone').value = document.getElementById('quickPhone').value;
         if (document.getElementById('quickNic')) document.getElementById('formQuickNic').value = document.getElementById('quickNic').value;
         if (document.getElementById('quickEmail')) document.getElementById('formQuickEmail').value = document.getElementById('quickEmail').value;
+
+        // Prevent double-clicking / duplicate form submission
+        const submitBtn = document.querySelector('#bookingForm button[type="submit"]');
+        if (submitBtn) {
+            if (submitBtn.disabled) return false;
+            submitBtn.disabled = true;
+            submitBtn.innerText = '⏳ Processing Booking...';
+        }
 
         return true;
     }
