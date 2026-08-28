@@ -58,7 +58,7 @@ public class SlotServiceTest {
     @DisplayName("Should generate 8 dynamic 30-minute slots for shift 09:00 AM to 01:00 PM")
     void shouldGenerateDefaultSlots() {
         when(dentistRepository.findById(1)).thenReturn(Optional.of(sampleDentist));
-        when(scheduleRepository.findFirstByDentist_DentistIdAndScheduleDateAndIsActiveTrue(eq(1), eq(futureDate)))
+        when(scheduleRepository.findFirstByDentist_DentistIdAndScheduleDate(eq(1), eq(futureDate)))
                 .thenReturn(Optional.empty());
         when(appointmentRepository.findByDentist_DentistIdAndAppointmentDateAndStatusNot(eq(1), eq(futureDate), eq("CANCELLED")))
                 .thenReturn(Collections.emptyList());
@@ -80,7 +80,7 @@ public class SlotServiceTest {
         );
 
         when(dentistRepository.findById(1)).thenReturn(Optional.of(sampleDentist));
-        when(scheduleRepository.findFirstByDentist_DentistIdAndScheduleDateAndIsActiveTrue(eq(1), eq(futureDate)))
+        when(scheduleRepository.findFirstByDentist_DentistIdAndScheduleDate(eq(1), eq(futureDate)))
                 .thenReturn(Optional.of(customSchedule));
         when(appointmentRepository.findByDentist_DentistIdAndAppointmentDateAndStatusNot(eq(1), eq(futureDate), eq("CANCELLED")))
                 .thenReturn(Collections.emptyList());
@@ -90,5 +90,23 @@ public class SlotServiceTest {
         assertNotNull(slots);
         assertEquals(8, slots.size()); // 2 hours / 15 mins = 8 slots
         assertEquals("02:00 PM - 02:15 PM", slots.get(0).getDisplayTime());
+    }
+
+    @Test
+    @DisplayName("Should return empty list of slots when Doctor is explicitly Off Duty")
+    void shouldReturnEmptySlotsWhenDoctorIsOffDuty() {
+        DentistSchedule offDutySchedule = new DentistSchedule(
+                sampleDentist, futureDate, LocalTime.of(9, 0), LocalTime.of(17, 0), 30, 10
+        );
+        offDutySchedule.setIsActive(false);
+
+        when(dentistRepository.findById(1)).thenReturn(Optional.of(sampleDentist));
+        when(scheduleRepository.findFirstByDentist_DentistIdAndScheduleDate(eq(1), eq(futureDate)))
+                .thenReturn(Optional.of(offDutySchedule));
+
+        List<SlotDTO> slots = slotService.generateAvailableSlots(1, futureDate);
+
+        assertNotNull(slots);
+        assertTrue(slots.isEmpty());
     }
 }

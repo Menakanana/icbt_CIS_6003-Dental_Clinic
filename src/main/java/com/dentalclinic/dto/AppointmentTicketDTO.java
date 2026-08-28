@@ -16,12 +16,13 @@ public class AppointmentTicketDTO {
     private Integer patientId;
     private String patientName;
     private String contactNumber;
+    private String patientEmail;
     private String nic;
     private Integer dentistId;
     private String dentistName;
     private String specialization;
 
-    @JsonFormat(pattern = "yyyy-MM-dd")
+    @JsonFormat(pattern = "dd/MM/yyyy")
     private LocalDate appointmentDate;
 
     @JsonFormat(pattern = "HH:mm:ss")
@@ -78,6 +79,9 @@ public class AppointmentTicketDTO {
     public String getContactNumber() { return contactNumber; }
     public void setContactNumber(String contactNumber) { this.contactNumber = contactNumber; }
 
+    public String getPatientEmail() { return patientEmail; }
+    public void setPatientEmail(String patientEmail) { this.patientEmail = patientEmail; }
+
     public String getNic() { return nic; }
     public void setNic(String nic) { this.nic = nic; }
 
@@ -92,6 +96,9 @@ public class AppointmentTicketDTO {
 
     public LocalDate getAppointmentDate() { return appointmentDate; }
     public void setAppointmentDate(LocalDate appointmentDate) { this.appointmentDate = appointmentDate; }
+    public String getFormattedAppointmentDate() {
+        return appointmentDate != null ? appointmentDate.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "";
+    }
 
     public LocalTime getStartTime() { return startTime; }
     public void setStartTime(LocalTime startTime) { this.startTime = startTime; }
@@ -116,6 +123,27 @@ public class AppointmentTicketDTO {
 
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
+
+    public String getMedicalHistory() { return medicalHistory; }
+    public void setMedicalHistory(String medicalHistory) { this.medicalHistory = medicalHistory; }
+
+    public String getRelationship() { return relationship; }
+    public void setRelationship(String relationship) { this.relationship = relationship; }
+
+    public String getPaymentStatus() { return paymentStatus; }
+    public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
+
+    public BigDecimal getPaidAmount() { return paidAmount != null ? paidAmount : BigDecimal.ZERO; }
+    public void setPaidAmount(BigDecimal paidAmount) { this.paidAmount = paidAmount; }
+
+    public String getPaymentMethod() { return paymentMethod; }
+    public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
+
+    private String medicalHistory;
+    private String relationship;
+    private String paymentStatus = "UNPAID";
+    private BigDecimal paidAmount = BigDecimal.ZERO;
+    private String paymentMethod = "Cash";
 
     public Integer tokenNumber() { return tokenNumber; }
     public String patientName() { return patientName; }

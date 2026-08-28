@@ -17,6 +17,7 @@ public class BookingRequestDTO {
     private String quickPatientName;
     private String quickContactNumber;
     private String quickNic;
+    private String quickEmail;
 
     @NotNull(message = "Dentist ID is required")
     private Integer dentistId;
@@ -24,7 +25,7 @@ public class BookingRequestDTO {
     private Integer treatmentTypeId;
 
     @NotNull(message = "Appointment date is required")
-    @JsonFormat(pattern = "yyyy-MM-dd")
+    @JsonFormat(pattern = "dd/MM/yyyy")
     private LocalDate appointmentDate;
 
     @NotNull(message = "Start time is required")
@@ -36,6 +37,9 @@ public class BookingRequestDTO {
 
     private Integer tokenNumber;
     private String notes;
+
+    private String initialPaymentOption = "PAY_NOW"; // "PAY_NOW" or "PAY_LATER"
+    private String paymentMethod = "Cash";
 
     public BookingRequestDTO() {
     }
@@ -52,6 +56,9 @@ public class BookingRequestDTO {
 
     public String getQuickNic() { return quickNic; }
     public void setQuickNic(String quickNic) { this.quickNic = quickNic; }
+
+    public String getQuickEmail() { return quickEmail; }
+    public void setQuickEmail(String quickEmail) { this.quickEmail = quickEmail; }
 
     public Integer getDentistId() { return dentistId; }
     public void setDentistId(Integer dentistId) { this.dentistId = dentistId; }
@@ -73,6 +80,12 @@ public class BookingRequestDTO {
 
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
+
+    public String getInitialPaymentOption() { return initialPaymentOption; }
+    public void setInitialPaymentOption(String initialPaymentOption) { this.initialPaymentOption = initialPaymentOption; }
+
+    public String getPaymentMethod() { return paymentMethod; }
+    public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
 
     public Integer patientId() { return patientId; }
     public Integer dentistId() { return dentistId; }

@@ -76,7 +76,7 @@ public class AppointmentServiceTest {
 
         when(patientRepository.findById(10)).thenReturn(Optional.of(samplePatient));
         when(dentistRepository.findById(1)).thenReturn(Optional.of(sampleDentist));
-        when(appointmentRepository.findOverlappingAppointments(eq(1), eq(futureDate), any(), any()))
+        when(appointmentRepository.findByDentist_DentistIdAndAppointmentDateAndStatusNot(eq(1), eq(futureDate), eq("CANCELLED")))
                 .thenReturn(Collections.emptyList());
         when(appointmentRepository.countActiveAppointmentsForDentistOnDate(eq(1), eq(futureDate)))
                 .thenReturn(0);
@@ -111,9 +111,11 @@ public class AppointmentServiceTest {
         Patient newPatient = new Patient("Kamal Gunaratne", "0779998877", null, "Clinic Walk-in", "199512345678");
         newPatient.setPatientId(20);
 
+        when(patientRepository.findFirstByNicAndIsActiveTrue("199512345678")).thenReturn(Optional.empty());
+        when(patientRepository.findFirstByPatientNameIgnoreCaseAndContactNumberAndIsActiveTrue("Kamal Gunaratne", "0779998877")).thenReturn(Optional.empty());
         when(patientRepository.save(any(Patient.class))).thenReturn(newPatient);
         when(dentistRepository.findById(1)).thenReturn(Optional.of(sampleDentist));
-        when(appointmentRepository.findOverlappingAppointments(eq(1), eq(futureDate), any(), any()))
+        when(appointmentRepository.findByDentist_DentistIdAndAppointmentDateAndStatusNot(eq(1), eq(futureDate), eq("CANCELLED")))
                 .thenReturn(Collections.emptyList());
         when(appointmentRepository.countActiveAppointmentsForDentistOnDate(eq(1), eq(futureDate)))
                 .thenReturn(1);
@@ -133,6 +135,36 @@ public class AppointmentServiceTest {
     }
 
     @Test
+    @DisplayName("Should reuse existing patient on quick add if NIC or Name+Phone already exists")
+    void shouldReuseExistingPatientOnQuickAddDeduplication() {
+        BookingRequestDTO request = new BookingRequestDTO();
+        request.setQuickPatientName("John Doe");
+        request.setQuickContactNumber("0771234567");
+        request.setQuickNic("199012345678");
+        request.setDentistId(1);
+        request.setAppointmentDate(futureDate);
+        request.setStartTime(LocalTime.of(11, 0));
+
+        when(patientRepository.findFirstByNicAndIsActiveTrue("199012345678")).thenReturn(Optional.of(samplePatient));
+        when(dentistRepository.findById(1)).thenReturn(Optional.of(sampleDentist));
+        when(appointmentRepository.findByDentist_DentistIdAndAppointmentDateAndStatusNot(eq(1), eq(futureDate), eq("CANCELLED")))
+                .thenReturn(Collections.emptyList());
+        when(appointmentRepository.countActiveAppointmentsForDentistOnDate(eq(1), eq(futureDate)))
+                .thenReturn(0);
+
+        Appointment mockSaved = new Appointment(
+                samplePatient, sampleDentist, null, null, null, 1, futureDate, LocalTime.of(11, 0), LocalTime.of(11, 30), "BOOKED"
+        );
+        mockSaved.setAppointmentId(103);
+        when(appointmentRepository.save(any(Appointment.class))).thenReturn(mockSaved);
+
+        AppointmentTicketDTO ticket = appointmentService.bookAppointment(request);
+
+        assertNotNull(ticket);
+        assertEquals("John Doe", ticket.getPatientName());
+    }
+
+    @Test
     @DisplayName("Should throw exception when booking time slot overlaps with existing appointment")
     void shouldThrowExceptionWhenTimeSlotOverlaps() {
         BookingRequestDTO request = new BookingRequestDTO();
@@ -147,9 +179,85 @@ public class AppointmentServiceTest {
         Appointment existingApp = new Appointment(
                 samplePatient, sampleDentist, null, null, null, 1, futureDate, LocalTime.of(10, 0), LocalTime.of(10, 30), "BOOKED"
         );
-        when(appointmentRepository.findOverlappingAppointments(eq(1), eq(futureDate), any(), any()))
+        when(appointmentRepository.findByDentist_DentistIdAndAppointmentDateAndStatusNot(eq(1), eq(futureDate), eq("CANCELLED")))
                 .thenReturn(Collections.singletonList(existingApp));
 
         assertThrows(IllegalStateException.class, () -> appointmentService.bookAppointment(request));
+    }
+
+    @Test
+    @DisplayName("Should throw exception when booking with non-existent patient ID")
+    void shouldThrowExceptionWhenPatientNotFound() {
+        BookingRequestDTO request = new BookingRequestDTO();
+        request.setPatientId(999);
+        request.setDentistId(1);
+
+        when(patientRepository.findById(999)).thenReturn(Optional.empty());
+
+        assertThrows(com.dentalclinic.exception.ResourceNotFoundException.class, () -> appointmentService.bookAppointment(request));
+    }
+
+    @Test
+    @DisplayName("Should throw exception when booking with non-existent dentist ID")
+    void shouldThrowExceptionWhenDentistNotFound() {
+        BookingRequestDTO request = new BookingRequestDTO();
+        request.setPatientId(10);
+        request.setDentistId(999);
+
+        when(patientRepository.findById(10)).thenReturn(Optional.of(samplePatient));
+        when(dentistRepository.findById(999)).thenReturn(Optional.empty());
+
+        assertThrows(com.dentalclinic.exception.ResourceNotFoundException.class, () -> appointmentService.bookAppointment(request));
+    }
+
+    @Test
+    @DisplayName("Should return empty list when no appointments exist for today")
+    void shouldGetTodayAppointments_EmptyList() {
+        when(appointmentRepository.findByAppointmentDateAndStatusNotOrderByTokenNumberAsc(any(LocalDate.class), eq("CANCELLED"))).thenReturn(Collections.emptyList());
+
+        var todayList = appointmentService.getTodayAppointments();
+        assertNotNull(todayList);
+        assertTrue(todayList.isEmpty());
+    }
+
+    @Test
+    @DisplayName("Should successfully retrieve appointment by ID")
+    void shouldGetAppointmentById_Success() {
+        Appointment app = new Appointment(
+                samplePatient, sampleDentist, null, null, null, 1, futureDate, LocalTime.of(10, 0), LocalTime.of(10, 30), "CONFIRMED"
+        );
+        app.setAppointmentId(50);
+        when(appointmentRepository.findById(50)).thenReturn(Optional.of(app));
+
+        AppointmentTicketDTO ticket = appointmentService.getAppointmentById(50);
+        assertNotNull(ticket);
+        assertEquals(50, ticket.getAppointmentId());
+    }
+
+    @Test
+    @DisplayName("Should successfully reschedule appointment to new date and time")
+    void shouldRescheduleAppointment_Success() {
+        Appointment app = new Appointment(
+                samplePatient, sampleDentist, null, null, null, 1, futureDate, LocalTime.of(10, 0), LocalTime.of(10, 30), "CONFIRMED"
+        );
+        app.setAppointmentId(50);
+
+        LocalDate nextWeek = futureDate.plusDays(7);
+        LocalTime newStart = LocalTime.of(14, 0);
+        LocalTime newEnd = LocalTime.of(14, 30);
+
+        when(appointmentRepository.findById(50)).thenReturn(Optional.of(app));
+        when(appointmentRepository.findByDentist_DentistIdAndAppointmentDateAndStatusNot(eq(1), eq(nextWeek), eq("CANCELLED")))
+                .thenReturn(Collections.emptyList());
+        when(appointmentRepository.countActiveAppointmentsForDentistOnDate(eq(1), eq(nextWeek))).thenReturn(3);
+        when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AppointmentTicketDTO rescheduled = appointmentService.rescheduleAppointment(50, nextWeek, newStart, newEnd);
+
+        assertNotNull(rescheduled);
+        assertEquals(50, rescheduled.getAppointmentId());
+        assertEquals(nextWeek, rescheduled.getAppointmentDate());
+        assertEquals(newStart, rescheduled.getStartTime());
+        assertEquals(4, rescheduled.getTokenNumber());
     }
 }
