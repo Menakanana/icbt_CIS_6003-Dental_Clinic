@@ -11,7 +11,7 @@ spring:
       suffix: .jsp
 
   datasource:
-    url: jdbc:h2:mem:SunriseDentalClinicDB_Test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MSSQLServer
+    url: jdbc:h2:mem:SunriseDentalClinic_Test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MSSQLServer
     driverClassName: org.h2.Driver
     username: sa
     password: ""

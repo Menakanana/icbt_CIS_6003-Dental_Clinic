@@ -32,7 +32,7 @@ public class SlotApiController {
     @GetMapping("/available")
     public ResponseEntity<List<SlotDTO>> getAvailableSlots(
             @RequestParam("dentistId") Integer dentistId,
-            @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+            @RequestParam("date") @DateTimeFormat(pattern = "dd/MM/yyyy", fallbackPatterns = {"yyyy-MM-dd", "dd-MM-yyyy", "MM-dd-yyyy", "yyyy/MM/dd", "MM/dd/yyyy"}) LocalDate date) {
 
         List<SlotDTO> slots = slotService.generateAvailableSlots(dentistId, date);
         return ResponseEntity.ok(slots);

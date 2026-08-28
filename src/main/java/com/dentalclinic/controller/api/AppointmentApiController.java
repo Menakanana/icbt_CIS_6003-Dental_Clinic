@@ -23,10 +23,13 @@ import java.util.List;
 public class AppointmentApiController {
 
     private final AppointmentService appointmentService;
+    private final com.dentalclinic.service.EmailNotificationService emailNotificationService;
 
     @Autowired
-    public AppointmentApiController(AppointmentService appointmentService) {
+    public AppointmentApiController(AppointmentService appointmentService,
+                                     @Autowired(required = false) com.dentalclinic.service.EmailNotificationService emailNotificationService) {
         this.appointmentService = appointmentService;
+        this.emailNotificationService = emailNotificationService;
     }
 
     /**
@@ -48,11 +51,55 @@ public class AppointmentApiController {
     }
 
     /**
+     * GET /api/appointments/date - Fetch all scheduled appointments for a specific date.
+     */
+    @GetMapping("/date")
+    public ResponseEntity<List<AppointmentTicketDTO>> getAppointmentsByDate(
+            @RequestParam("date") @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate date) {
+        List<AppointmentTicketDTO> list = appointmentService.getAppointmentsByDate(date);
+        return ResponseEntity.ok(list);
+    }
+
+    /**
      * GET /api/appointments/{id} - Search single appointment details by ID.
      */
     @GetMapping("/{id}")
     public ResponseEntity<AppointmentTicketDTO> getAppointmentById(@PathVariable("id") Integer id) {
         AppointmentTicketDTO ticket = appointmentService.getAppointmentById(id);
         return ResponseEntity.ok(ticket);
+    }
+
+    /**
+     * POST /api/appointments/{id}/reschedule - Reschedule existing appointment to new date/time.
+     */
+    @PostMapping("/{id}/reschedule")
+    public ResponseEntity<AppointmentTicketDTO> rescheduleAppointment(
+            @PathVariable("id") Integer id,
+            @RequestParam("date") @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate newDate,
+            @RequestParam("startTime") @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.TIME) java.time.LocalTime newStartTime) {
+        AppointmentTicketDTO updated = appointmentService.rescheduleAppointment(id, newDate, newStartTime, null);
+        return ResponseEntity.ok(updated);
+    }
+
+    /**
+     * POST /api/appointments/{id}/send-email - Dispatch ticket confirmation email.
+     */
+    @PostMapping("/{id}/send-email")
+    public ResponseEntity<java.util.Map<String, Object>> sendTicketEmail(
+            @PathVariable("id") Integer id,
+            @RequestParam(name = "email", required = false) String customEmail) {
+        java.util.Map<String, Object> response = new java.util.HashMap<>();
+        try {
+            AppointmentTicketDTO ticket = appointmentService.getAppointmentById(id);
+            String recipient = (customEmail != null && !customEmail.isBlank()) ? customEmail : ticket.getPatientEmail();
+            boolean sent = (emailNotificationService != null) && emailNotificationService.sendBookingConfirmationEmail(ticket, recipient);
+            response.put("success", sent);
+            response.put("message", sent ? "Appointment ticket email dispatched successfully." : "Ticket email logged in console mode.");
+            return ResponseEntity.ok(response);
+        } catch (Exception ex) {
+            response.put("success", false);
+            response.put("message", ex.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
     }
 }

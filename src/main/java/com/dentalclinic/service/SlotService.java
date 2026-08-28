@@ -65,10 +65,14 @@ public class SlotService {
         int maxPatients = 999;
 
         DentistSchedule schedule = scheduleRepository
-                .findFirstByDentist_DentistIdAndScheduleDateAndIsActiveTrue(dentistId, selectedDate)
+                .findFirstByDentist_DentistIdAndScheduleDate(dentistId, selectedDate)
                 .orElse(null);
 
         if (schedule != null) {
+            if (Boolean.FALSE.equals(schedule.getIsActive())) {
+                // Doctor is explicitly OFF DUTY on this date -> return empty list of available slots
+                return List.of();
+            }
             shiftStart = schedule.getSessionStartTime();
             shiftEnd = schedule.getSessionEndTime();
             if (schedule.getMaxPatientsInSession() != null && schedule.getMaxPatientsInSession() > 0) {

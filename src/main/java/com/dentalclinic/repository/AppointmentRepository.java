@@ -24,7 +24,11 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Intege
 
     List<Appointment> findByAppointmentDateAndStatusNot(LocalDate appointmentDate, String status);
 
+    List<Appointment> findByAppointmentDateAndStatusNotOrderByTokenNumberAsc(LocalDate appointmentDate, String status);
+
     List<Appointment> findByPatient_PatientIdOrderByAppointmentDateDesc(Integer patientId);
+
+    List<Appointment> findByPatient_PatientIdOrderByAppointmentDateDescStartTimeDesc(Integer patientId);
 
     @Query("SELECT COUNT(a) FROM Appointment a WHERE a.dentist.dentistId = :dentistId AND a.appointmentDate = :appointmentDate AND a.status != 'CANCELLED'")
     Integer countActiveAppointmentsForDentistOnDate(@Param("dentistId") Integer dentistId,

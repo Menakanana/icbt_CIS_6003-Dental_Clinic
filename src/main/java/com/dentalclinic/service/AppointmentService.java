@@ -19,6 +19,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -61,24 +62,45 @@ public class AppointmentService {
             throw new IllegalArgumentException("Cannot book an appointment for a past date.");
         }
 
-        // Step 1: Resolve Patient (Existing or Inline Quick-Add)
+        // Step 1: Resolve Patient (Existing or Inline Quick-Add with Deduplication)
         Patient patient;
         if (request.getPatientId() != null) {
             patient = patientRepository.findById(request.getPatientId())
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Patient not found with ID: " + request.getPatientId()));
         } else if (request.getQuickPatientName() != null && !request.getQuickPatientName().trim().isEmpty()) {
-            // 1-step Inline Quick-Add Patient registration
-            patient = new Patient(
-                    request.getQuickPatientName().trim(),
-                    request.getQuickContactNumber() != null ? request.getQuickContactNumber().trim() : "0770000000",
-                    null,
-                    "Clinic Walk-in / Phone Registration",
-                    request.getQuickNic() != null ? request.getQuickNic().trim() : null);
-            patient = patientRepository.save(patient);
+            String quickName = request.getQuickPatientName().trim();
+            String quickPhone = request.getQuickContactNumber() != null ? request.getQuickContactNumber().trim() : "0770000000";
+            String quickNic = request.getQuickNic() != null ? request.getQuickNic().trim() : null;
+            String quickEmail = request.getQuickEmail() != null ? request.getQuickEmail().trim() : null;
+
+            // Check if matching patient already exists in DB to prevent duplicate patient records
+            Optional<Patient> existingPatient = Optional.empty();
+            if (quickNic != null && !quickNic.isEmpty()) {
+                existingPatient = patientRepository.findFirstByNicAndIsActiveTrue(quickNic);
+            }
+            if (existingPatient.isEmpty() && !quickName.isEmpty() && !quickPhone.isEmpty()) {
+                existingPatient = patientRepository.findFirstByPatientNameIgnoreCaseAndContactNumberAndIsActiveTrue(quickName, quickPhone);
+            }
+
+            if (existingPatient.isPresent()) {
+                patient = existingPatient.get();
+                if ((patient.getEmail() == null || patient.getEmail().isBlank()) && quickEmail != null && !quickEmail.isBlank()) {
+                    patient.setEmail(quickEmail);
+                    patient = patientRepository.save(patient);
+                }
+            } else {
+                patient = new Patient(quickName, quickPhone, quickEmail, "Clinic Walk-in / Phone Registration", quickNic);
+                patient = patientRepository.save(patient);
+            }
         } else {
             throw new IllegalArgumentException(
                     "Either select an existing patient or provide quick-add patient details.");
+        }
+
+        if (request.getQuickEmail() != null && !request.getQuickEmail().isBlank() && (patient.getEmail() == null || patient.getEmail().isBlank())) {
+            patient.setEmail(request.getQuickEmail().trim());
+            patient = patientRepository.save(patient);
         }
 
         // Step 2: Resolve Dentist
@@ -92,14 +114,17 @@ public class AppointmentService {
             treatmentType = treatmentTypeRepository.findById(request.getTreatmentTypeId()).orElse(null);
         }
 
-        // Step 4: Validate Overlap
+        // Step 4: Validate Overlap (In-memory evaluation for 100% SQL Server / DB Compatibility)
         LocalTime startTime = request.getStartTime();
         LocalTime endTime = request.getEndTime() != null ? request.getEndTime() : startTime.plusMinutes(30);
 
-        List<Appointment> overlaps = appointmentRepository.findOverlappingAppointments(
-                dentist.getDentistId(), request.getAppointmentDate(), startTime, endTime);
+        List<Appointment> activeAppointments = appointmentRepository.findByDentist_DentistIdAndAppointmentDateAndStatusNot(
+                dentist.getDentistId(), request.getAppointmentDate(), "CANCELLED");
 
-        if (!overlaps.isEmpty()) {
+        boolean hasOverlap = activeAppointments.stream()
+                .anyMatch(a -> (startTime.isBefore(a.getEndTime()) && endTime.isAfter(a.getStartTime())));
+
+        if (hasOverlap) {
             throw new IllegalStateException("Selected time slot is no longer available. Please select another slot.");
         }
 
@@ -121,32 +146,32 @@ public class AppointmentService {
                 "BOOKED");
         appointment.setNotes(request.getNotes());
 
+        boolean payNow = !"PAY_LATER".equalsIgnoreCase(request.getInitialPaymentOption());
+        java.math.BigDecimal fee = dentist.getConsultationFee() != null ? dentist.getConsultationFee() : java.math.BigDecimal.ZERO;
+        java.math.BigDecimal clinicFee = new java.math.BigDecimal("500.00");
+        java.math.BigDecimal deposit = fee.add(clinicFee);
+
+        if (payNow) {
+            appointment.setPaymentStatus("PAID_DEPOSIT");
+            appointment.setPaidAmount(deposit);
+        } else {
+            appointment.setPaymentStatus("UNPAID");
+            appointment.setPaidAmount(java.math.BigDecimal.ZERO);
+        }
+        if (request.getPaymentMethod() != null && !request.getPaymentMethod().trim().isEmpty()) {
+            appointment.setPaymentMethod(request.getPaymentMethod().trim());
+        }
+
         Appointment saved = appointmentRepository.save(appointment);
 
         // Step 7: Construct AppointmentTicketDTO Response
-        String timeRange = startTime.format(TIME_FORMATTER) + " - " + endTime.format(TIME_FORMATTER);
-
-        AppointmentTicketDTO ticket = new AppointmentTicketDTO(
-                saved.getAppointmentId(),
-                saved.getAppointmentId() + 1000,
-                saved.getTokenNumber(),
-                patient.getPatientId(),
-                patient.getPatientName(),
-                patient.getContactNumber(),
-                patient.getNic(),
-                dentist.getDentistId(),
-                dentist.getDentistName(),
-                dentist.getSpecialization(),
-                saved.getAppointmentDate(),
-                startTime,
-                endTime,
-                timeRange,
-                saved.getStatus(),
-                dentist.getConsultationFee());
+        AppointmentTicketDTO ticket = mapToTicketDTO(saved);
 
         if (emailNotificationService != null) {
             try {
-                emailNotificationService.sendBookingConfirmationEmail(ticket, patient.getEmail());
+                if (patient.getEmail() != null && !patient.getEmail().trim().isEmpty()) {
+                    emailNotificationService.sendBookingConfirmationEmail(ticket, patient.getEmail());
+                }
             } catch (Exception ex) {
                 // Non-blocking log
             }
@@ -159,7 +184,18 @@ public class AppointmentService {
      * Retrieves all active scheduled appointments for today.
      */
     public List<AppointmentTicketDTO> getTodayAppointments() {
-        return appointmentRepository.findByAppointmentDateAndStatusNot(LocalDate.now(), "CANCELLED")
+        return appointmentRepository.findByAppointmentDateAndStatusNotOrderByTokenNumberAsc(LocalDate.now(), "CANCELLED")
+                .stream()
+                .map(this::mapToTicketDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Retrieves all active scheduled appointments for a specific date.
+     */
+    public List<AppointmentTicketDTO> getAppointmentsByDate(LocalDate date) {
+        if (date == null) date = LocalDate.now();
+        return appointmentRepository.findByAppointmentDateAndStatusNotOrderByTokenNumberAsc(date, "CANCELLED")
                 .stream()
                 .map(this::mapToTicketDTO)
                 .collect(Collectors.toList());
@@ -178,10 +214,51 @@ public class AppointmentService {
      * Retrieves full chronological visit history for a specific patient.
      */
     public List<AppointmentTicketDTO> getPatientVisitHistory(Integer patientId) {
-        return appointmentRepository.findByPatient_PatientIdOrderByAppointmentDateDesc(patientId)
+        return appointmentRepository.findByPatient_PatientIdOrderByAppointmentDateDescStartTimeDesc(patientId)
                 .stream()
                 .map(this::mapToTicketDTO)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Reschedules an existing appointment to a new date and time slot.
+     */
+    public AppointmentTicketDTO rescheduleAppointment(Integer appointmentId, LocalDate newDate, LocalTime newStartTime, LocalTime newEndTime) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with ID: " + appointmentId));
+
+        if (newDate.isBefore(LocalDate.now())) {
+            throw new IllegalArgumentException("Cannot reschedule to a past date.");
+        }
+
+        LocalTime endTime = newEndTime != null ? newEndTime : newStartTime.plusMinutes(30);
+
+        // Check for time slot overlap on the new date (excluding this current appointment)
+        List<Appointment> activeAppointments = appointmentRepository.findByDentist_DentistIdAndAppointmentDateAndStatusNot(
+                appointment.getDentist().getDentistId(), newDate, "CANCELLED");
+
+        boolean hasOverlap = activeAppointments.stream()
+                .filter(a -> !a.getAppointmentId().equals(appointmentId))
+                .anyMatch(a -> (newStartTime.isBefore(a.getEndTime()) && endTime.isAfter(a.getStartTime())));
+
+        if (hasOverlap) {
+            throw new IllegalStateException("Selected time slot on " + newDate + " is no longer available. Please pick another slot.");
+        }
+
+        // Recalculate token number if date changed
+        if (!newDate.equals(appointment.getAppointmentDate())) {
+            Integer nextToken = appointmentRepository.countActiveAppointmentsForDentistOnDate(
+                    appointment.getDentist().getDentistId(), newDate) + 1;
+            appointment.setTokenNumber(nextToken);
+        }
+
+        appointment.setAppointmentDate(newDate);
+        appointment.setStartTime(newStartTime);
+        appointment.setEndTime(endTime);
+        appointment.setStatus("CONFIRMED");
+
+        Appointment saved = appointmentRepository.save(appointment);
+        return mapToTicketDTO(saved);
     }
 
     private AppointmentTicketDTO mapToTicketDTO(Appointment app) {
@@ -204,9 +281,15 @@ public class AppointmentService {
                 app.getStatus(),
                 app.getDentist().getConsultationFee());
         
+        dto.setPatientEmail(app.getPatient() != null ? app.getPatient().getEmail() : null);
         dto.setTreatmentName(app.getTreatmentType() != null ? app.getTreatmentType().getTreatmentName() : "General Dental Consultation");
         dto.setTreatmentBaseCost(app.getTreatmentType() != null ? app.getTreatmentType().getBaseCost() : java.math.BigDecimal.ZERO);
         dto.setNotes(app.getNotes());
+        dto.setMedicalHistory(app.getPatient() != null ? app.getPatient().getMedicalHistory() : null);
+        dto.setRelationship(app.getPatient() != null ? app.getPatient().getRelationship() : "Self");
+        dto.setPaymentStatus(app.getPaymentStatus() != null ? app.getPaymentStatus() : "UNPAID");
+        dto.setPaidAmount(app.getPaidAmount() != null ? app.getPaidAmount() : java.math.BigDecimal.ZERO);
+        dto.setPaymentMethod(app.getPaymentMethod() != null ? app.getPaymentMethod() : "Cash");
         return dto;
     }
 }

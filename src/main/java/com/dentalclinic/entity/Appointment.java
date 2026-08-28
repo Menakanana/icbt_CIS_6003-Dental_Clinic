@@ -63,6 +63,15 @@ public class Appointment {
     @Column(name = "Status", nullable = false, length = 20)
     private String status = "BOOKED";
 
+    @Column(name = "PaymentStatus", length = 20)
+    private String paymentStatus = "UNPAID";
+
+    @Column(name = "PaidAmount")
+    private java.math.BigDecimal paidAmount = java.math.BigDecimal.ZERO;
+
+    @Column(name = "PaymentMethod", length = 30)
+    private String paymentMethod = "Cash";
+
     @Column(name = "Notes", length = 255)
     private String notes;
 
@@ -118,6 +127,15 @@ public class Appointment {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public String getPaymentStatus() { return paymentStatus; }
+    public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
+
+    public java.math.BigDecimal getPaidAmount() { return paidAmount != null ? paidAmount : java.math.BigDecimal.ZERO; }
+    public void setPaidAmount(java.math.BigDecimal paidAmount) { this.paidAmount = paidAmount; }
+
+    public String getPaymentMethod() { return paymentMethod; }
+    public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
 
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
