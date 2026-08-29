@@ -7,6 +7,7 @@ import com.dentalclinic.entity.Dentist;
 import com.dentalclinic.entity.Patient;
 import com.dentalclinic.repository.AppointmentRepository;
 import com.dentalclinic.repository.DentistRepository;
+import com.dentalclinic.repository.DentistScheduleRepository;
 import com.dentalclinic.repository.PatientRepository;
 import com.dentalclinic.repository.TreatmentTypeRepository;
 import com.dentalclinic.service.AppointmentService;
@@ -22,6 +23,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -46,7 +48,9 @@ public class AppointmentServiceTest {
     @Mock
     private TreatmentTypeRepository treatmentTypeRepository;
 
-    @InjectMocks
+    @Mock
+    private DentistScheduleRepository scheduleRepository;
+
     private AppointmentService appointmentService;
 
     private Dentist sampleDentist;
@@ -55,6 +59,9 @@ public class AppointmentServiceTest {
 
     @BeforeEach
     void setUp() {
+        com.dentalclinic.service.SlotService slotService = new com.dentalclinic.service.SlotService(dentistRepository, scheduleRepository, appointmentRepository);
+        appointmentService = new AppointmentService(appointmentRepository, patientRepository, dentistRepository, treatmentTypeRepository, null, slotService);
+
         sampleDentist = new Dentist("Dr. Sarah Chen", "Orthodontist", "0771112233", new BigDecimal("1500.00"));
         sampleDentist.setDentistId(1);
 
@@ -247,17 +254,78 @@ public class AppointmentServiceTest {
         LocalTime newEnd = LocalTime.of(14, 30);
 
         when(appointmentRepository.findById(50)).thenReturn(Optional.of(app));
-        when(appointmentRepository.findByDentist_DentistIdAndAppointmentDateAndStatusNot(eq(1), eq(nextWeek), eq("CANCELLED")))
-                .thenReturn(Collections.emptyList());
-        when(appointmentRepository.countActiveAppointmentsForDentistOnDate(eq(1), eq(nextWeek))).thenReturn(3);
+        when(dentistRepository.findById(1)).thenReturn(Optional.of(sampleDentist));
+        when(scheduleRepository.findByDentist_DentistIdAndScheduleDate(1, nextWeek)).thenReturn(Collections.emptyList());
+        when(appointmentRepository.findByDentist_DentistIdAndAppointmentDateAndStatusNot(1, nextWeek, "CANCELLED")).thenReturn(Collections.emptyList());
         when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        AppointmentTicketDTO rescheduled = appointmentService.rescheduleAppointment(50, nextWeek, newStart, newEnd);
+        AppointmentTicketDTO rescheduled = appointmentService.rescheduleAppointment(50, nextWeek, LocalTime.of(9, 0), LocalTime.of(9, 30));
 
         assertNotNull(rescheduled);
         assertEquals(50, rescheduled.getAppointmentId());
         assertEquals(nextWeek, rescheduled.getAppointmentDate());
-        assertEquals(newStart, rescheduled.getStartTime());
-        assertEquals(4, rescheduled.getTokenNumber());
+        assertEquals(LocalTime.of(9, 0), rescheduled.getStartTime());
+        assertEquals(1, rescheduled.getTokenNumber());
+    }
+
+    @Test
+    @DisplayName("Should throw IllegalStateException when rescheduling a COMPLETED or CANCELLED appointment")
+    void shouldRescheduleAppointment_StatusGuard_ThrowsException() {
+        Appointment app = new Appointment(
+                samplePatient, sampleDentist, null, null, null, 1, futureDate, LocalTime.of(10, 0), LocalTime.of(10, 30), "COMPLETED"
+        );
+        app.setAppointmentId(50);
+
+        when(appointmentRepository.findById(50)).thenReturn(Optional.of(app));
+
+        assertThrows(IllegalStateException.class, () ->
+                appointmentService.rescheduleAppointment(50, futureDate.plusDays(1), LocalTime.of(11, 0), null)
+        );
+    }
+
+    @Test
+    @DisplayName("Should throw IllegalStateException when rescheduling an unpaid past appointment")
+    void shouldRescheduleUnpaidPastAppointment_ThrowsException() {
+        LocalDate pastDate = LocalDate.now().minusDays(1);
+        Appointment app = new Appointment(
+                samplePatient, sampleDentist, null, null, null, 1, pastDate, LocalTime.of(10, 0), LocalTime.of(10, 30), "BOOKED"
+        );
+        app.setAppointmentId(60);
+        app.setPaidAmount(BigDecimal.ZERO);
+        app.setPaymentStatus("UNPAID");
+
+        when(appointmentRepository.findById(60)).thenReturn(Optional.of(app));
+
+        assertThrows(IllegalStateException.class, () ->
+                appointmentService.rescheduleAppointment(60, futureDate, LocalTime.of(9, 0), null)
+        );
+    }
+
+    @Test
+    @DisplayName("Should allow rescheduling a paid past appointment with Deposit Carry-Over")
+    void shouldReschedulePaidPastAppointment_DepositCarryOver_Success() {
+        LocalDate pastDate = LocalDate.now().minusDays(1);
+        Appointment app = new Appointment(
+                samplePatient, sampleDentist, null, null, null, 1, pastDate, LocalTime.of(10, 0), LocalTime.of(10, 30), "BOOKED"
+        );
+        app.setAppointmentId(70);
+        app.setPaidAmount(new BigDecimal("2000.00"));
+        app.setPaymentStatus("PAID_DEPOSIT");
+        app.setPaymentMethod("Cash");
+
+        LocalDate nextWeek = futureDate.plusDays(2);
+        when(appointmentRepository.findById(70)).thenReturn(Optional.of(app));
+        when(dentistRepository.findById(1)).thenReturn(Optional.of(sampleDentist));
+        when(scheduleRepository.findByDentist_DentistIdAndScheduleDate(1, nextWeek)).thenReturn(Collections.emptyList());
+        when(appointmentRepository.findByDentist_DentistIdAndAppointmentDateAndStatusNot(1, nextWeek, "CANCELLED")).thenReturn(Collections.emptyList());
+        when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AppointmentTicketDTO ticket = appointmentService.rescheduleAppointment(70, nextWeek, LocalTime.of(9, 0), LocalTime.of(9, 30));
+
+        assertNotNull(ticket);
+        assertEquals(70, ticket.getAppointmentId());
+        assertEquals(nextWeek, ticket.getAppointmentDate());
+        assertEquals(new BigDecimal("2000.00"), ticket.getPaidAmount());
+        assertEquals("PAID_DEPOSIT", ticket.getPaymentStatus());
     }
 }

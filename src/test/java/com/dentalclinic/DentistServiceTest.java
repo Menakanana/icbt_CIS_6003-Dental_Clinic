@@ -122,4 +122,22 @@ public class DentistServiceTest {
         DentistScheduleDTO inputDTO = new DentistScheduleDTO(1, LocalDate.now(), LocalTime.of(17, 0), LocalTime.of(9, 0), 30);
         assertThrows(IllegalArgumentException.class, () -> dentistService.saveSchedule(inputDTO));
     }
+
+    @Test
+    @DisplayName("Unit Test: deleteDentist Soft Deletes Doctor Profile")
+    public void testDeleteDentist() {
+        when(dentistRepository.findById(1)).thenReturn(Optional.of(sampleDentist));
+        when(dentistRepository.save(any(Dentist.class))).thenAnswer(i -> i.getArgument(0));
+
+        dentistService.deleteDentist(1);
+
+        assertFalse(sampleDentist.getIsActive());
+    }
+
+    @Test
+    @DisplayName("Unit Test: deleteDentist Invalid ID Throws ResourceNotFoundException")
+    public void testDeleteDentist_InvalidId_ThrowsException() {
+        when(dentistRepository.findById(999)).thenReturn(Optional.empty());
+        assertThrows(com.dentalclinic.exception.ResourceNotFoundException.class, () -> dentistService.deleteDentist(999));
+    }
 }

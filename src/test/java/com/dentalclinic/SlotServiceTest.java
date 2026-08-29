@@ -58,8 +58,8 @@ public class SlotServiceTest {
     @DisplayName("Should generate 8 dynamic 30-minute slots for shift 09:00 AM to 01:00 PM")
     void shouldGenerateDefaultSlots() {
         when(dentistRepository.findById(1)).thenReturn(Optional.of(sampleDentist));
-        when(scheduleRepository.findFirstByDentist_DentistIdAndScheduleDate(eq(1), eq(futureDate)))
-                .thenReturn(Optional.empty());
+        when(scheduleRepository.findByDentist_DentistIdAndScheduleDate(eq(1), eq(futureDate)))
+                .thenReturn(Collections.emptyList());
         when(appointmentRepository.findByDentist_DentistIdAndAppointmentDateAndStatusNot(eq(1), eq(futureDate), eq("CANCELLED")))
                 .thenReturn(Collections.emptyList());
 
@@ -68,7 +68,7 @@ public class SlotServiceTest {
         assertNotNull(slots);
         assertEquals(8, slots.size()); // (13:00 - 09:00) / 30 mins = 8 slots
         assertTrue(slots.get(0).getIsAvailable());
-        assertEquals("09:00 AM - 09:30 AM", slots.get(0).getDisplayTime());
+        assertEquals("09:00 AM", slots.get(0).getDisplayTime());
         assertEquals(1, slots.get(0).getTokenNumber());
     }
 
@@ -80,8 +80,8 @@ public class SlotServiceTest {
         );
 
         when(dentistRepository.findById(1)).thenReturn(Optional.of(sampleDentist));
-        when(scheduleRepository.findFirstByDentist_DentistIdAndScheduleDate(eq(1), eq(futureDate)))
-                .thenReturn(Optional.of(customSchedule));
+        when(scheduleRepository.findByDentist_DentistIdAndScheduleDate(eq(1), eq(futureDate)))
+                .thenReturn(List.of(customSchedule));
         when(appointmentRepository.findByDentist_DentistIdAndAppointmentDateAndStatusNot(eq(1), eq(futureDate), eq("CANCELLED")))
                 .thenReturn(Collections.emptyList());
 
@@ -89,7 +89,33 @@ public class SlotServiceTest {
 
         assertNotNull(slots);
         assertEquals(8, slots.size()); // 2 hours / 15 mins = 8 slots
-        assertEquals("02:00 PM - 02:15 PM", slots.get(0).getDisplayTime());
+        assertEquals("02:00 PM", slots.get(0).getDisplayTime());
+    }
+
+    @Test
+    @DisplayName("Should generate sequential tokens across multiple session blocks while excluding breaks")
+    void shouldGenerateMultiSessionSlotsWithBreaks() {
+        DentistSchedule session1 = new DentistSchedule(
+                sampleDentist, futureDate, LocalTime.of(9, 0), LocalTime.of(11, 0), 20, 6
+        );
+        DentistSchedule session2 = new DentistSchedule(
+                sampleDentist, futureDate, LocalTime.of(14, 0), LocalTime.of(16, 0), 20, 6
+        );
+
+        when(dentistRepository.findById(1)).thenReturn(Optional.of(sampleDentist));
+        when(scheduleRepository.findByDentist_DentistIdAndScheduleDate(eq(1), eq(futureDate)))
+                .thenReturn(List.of(session1, session2));
+        when(appointmentRepository.findByDentist_DentistIdAndAppointmentDateAndStatusNot(eq(1), eq(futureDate), eq("CANCELLED")))
+                .thenReturn(Collections.emptyList());
+
+        List<SlotDTO> slots = slotService.generateAvailableSlots(1, futureDate);
+
+        assertNotNull(slots);
+        assertEquals(12, slots.size()); // 6 tokens in morning session + 6 tokens in evening session = 12 total
+        assertEquals(1, slots.get(0).getTokenNumber());
+        assertEquals("09:00 AM", slots.get(0).getDisplayTime());
+        assertEquals(7, slots.get(6).getTokenNumber());
+        assertEquals("02:00 PM", slots.get(6).getDisplayTime());
     }
 
     @Test
@@ -101,8 +127,8 @@ public class SlotServiceTest {
         offDutySchedule.setIsActive(false);
 
         when(dentistRepository.findById(1)).thenReturn(Optional.of(sampleDentist));
-        when(scheduleRepository.findFirstByDentist_DentistIdAndScheduleDate(eq(1), eq(futureDate)))
-                .thenReturn(Optional.of(offDutySchedule));
+        when(scheduleRepository.findByDentist_DentistIdAndScheduleDate(eq(1), eq(futureDate)))
+                .thenReturn(List.of(offDutySchedule));
 
         List<SlotDTO> slots = slotService.generateAvailableSlots(1, futureDate);
 

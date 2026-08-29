@@ -12,6 +12,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -65,5 +66,13 @@ public class DentistApiControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(invalidPayload))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("Scenario 5: DELETE /api/dentists/{id} - Soft Delete Doctor Profile Returns 200 OK")
+    public void testDeleteDentist_Success() throws Exception {
+        mockMvc.perform(delete("/api/dentists/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
     }
 }
