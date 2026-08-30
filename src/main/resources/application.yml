@@ -18,9 +18,8 @@ spring:
       prefix: /WEB-INF/views/
       suffix: .jsp
 
-  # Active Microsoft SQL Server Datasource Configuration
   datasource:
-    url: jdbc:sqlserver://localhost:1433;databaseName=SunriseDentalClinic;encrypt=false;trustServerCertificate=true
+    url: jdbc:sqlserver://localhost:1433;databaseName=SunriseDentalClinic;encrypt=true;trustServerCertificate=true;
     driverClassName: com.microsoft.sqlserver.jdbc.SQLServerDriver
     username: adminUser
     password: adminUser
@@ -34,17 +33,28 @@ spring:
       hibernate:
         format_sql: true
 
-# ==============================================================================
-# Commented Out: H2 In-Memory Database Configuration
-#
-#  datasource:
-#    url: jdbc:h2:mem:SunriseDentalClinic;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MSSQLServer
-#    driverClassName: org.h2.Driver
-#    username: sa
-#    password: ""
-#  h2:
-#    console:
-#      enabled: true
-#  jpa:
-#    database-platform: org.hibernate.dialect.H2Dialect
-# ==============================================================================
+  # Brevo / SMTP Mail Configuration (Transactional Emails)
+  mail:
+    host: ${SPRING_MAIL_HOST:smtp-relay.brevo.com}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
+    from: ${SPRING_MAIL_FROM:${SPRING_MAIL_USERNAME:notifications@sunrisedental.com}}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha

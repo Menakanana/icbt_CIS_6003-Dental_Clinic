@@ -57,6 +57,6 @@ nbdist/
 Thumbs.db
 desktop.ini
 
-# Internal Reference Files
-document/.internal_commit_roadmap.md
+# Environment Credentials File
+.env
 

@@ -1,22 +1,22 @@
 -- ================================================================
 -- DENTAL CLINIC MANAGEMENT SYSTEM - DATABASE SCRIPT (v3.0 Code-First)
 -- ================================================================
--- Database: SunriseDentalClinicDB
+-- Database: SunriseDentalClinic
 -- Version: 3.0 - Code-First Data Storage Layer
 -- Created: 2026-08-02
 -- ================================================================
 
-IF EXISTS (SELECT * FROM sys.databases WHERE name = 'SunriseDentalClinicDB')
+IF EXISTS (SELECT * FROM sys.databases WHERE name = 'SunriseDentalClinic')
 BEGIN
-    ALTER DATABASE SunriseDentalClinicDB SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-    DROP DATABASE SunriseDentalClinicDB;
+    ALTER DATABASE SunriseDentalClinic SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE SunriseDentalClinic;
 END
 GO
 
-CREATE DATABASE SunriseDentalClinicDB;
+CREATE DATABASE SunriseDentalClinic;
 GO
 
-USE SunriseDentalClinicDB;
+USE SunriseDentalClinic;
 GO
 
 -- ================================================================

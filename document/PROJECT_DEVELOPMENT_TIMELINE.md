@@ -31,7 +31,7 @@
 ### Sprint 1: Project Setup, Requirements & Database Design (July 08 – July 18, 2026)
 - **July 08, 2026:** Repository initialization, directory structure, and Git setup. *(Task D)*
 - **July 13, 2026:** Requirements analysis and evaluation of appointment scheduling models. *(Task A & B)*
-- **July 17, 2026:** Database schema design (`SunriseDentalClinicDB`) and DDL script (`DentalClinic_DB_Script.sql`). *(Task A & B)*
+- **July 17, 2026:** Database schema design (`SunriseDentalClinic`) and DDL script (`DentalClinic_DB_Script.sql`). *(Task A & B)*
 
 ---
 

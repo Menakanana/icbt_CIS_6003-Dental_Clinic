@@ -6,7 +6,7 @@
 |---|---|
 | **Diagram Name** | `dental-clinic-er.puml` |
 | **Module / Task** | CIS6003 - Advanced Programming (Task A & Database Design) |
-| **Database Name** | `SunriseDentalClinicDB` |
+| **Database Name** | `SunriseDentalClinic` |
 | **Notation Standard** | Crow's Foot ER Notation (UML / Relational Data Model) |
 
 ---
@@ -34,6 +34,11 @@
 8. **`Bills`**: Immutable financial snapshot generated upon completing/billing an appointment.
    - **Primary Key:** `BillID`
    - **Foreign Keys:** `AppointmentNumber` (UNIQUE), `PatientID`, `DentistID`, `IssuedBy`
+9. **`password_reset_tokens`**: Stores secure single-use tokens for password reset verification.
+   - **Primary Key:** `token_id`
+   - **Foreign Keys:** `userid` $\rightarrow$ `Users(UserID)`
+10. **`clinic_settings`**: Stores key-value system configuration parameters (e.g., clinic charge).
+   - **Primary Key:** `settingid`
 
 ---
 
@@ -44,3 +49,4 @@
 * `Patients` **`||--o{`** `Appointments`: One Patient can book zero or many Appointments.
 * `DentistSessionSlots` **`||--||`** `Appointments`: One Session Slot is reserved for exactly one Appointment.
 * `Appointments` **`||--||`** `Bills`: One Appointment generates exactly one Bill invoice.
+* `Users` **`||--o{`** `password_reset_tokens`: One User can request zero or many Password Reset Tokens.

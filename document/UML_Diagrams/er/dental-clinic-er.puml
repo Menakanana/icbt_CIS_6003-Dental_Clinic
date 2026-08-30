@@ -108,10 +108,29 @@ entity "Bills" as Bills {
   * IssuedBy : INT <<FK>>
 }
 
+entity "password_reset_tokens" as PasswordResetTokens {
+  * TokenID : BIGINT <<PK>>
+  --
+  * Token : VARCHAR(100) <<UQ>>
+  * UserID : INT <<FK>>
+  * ExpiryDate : DATETIME2
+  * IsUsed : BIT
+  * CreatedDate : DATETIME2
+}
+
+entity "clinic_settings" as ClinicSettings {
+  * SettingID : INT <<PK>>
+  --
+  * SettingKey : VARCHAR(50) <<UQ>>
+  * SettingValue : VARCHAR(255)
+  Description : VARCHAR(255)
+}
+
 ' Relational Cardinalities (Crow's Foot Notation)
 Users ||--o{ Users : "creates account"
 Users ||--o{ Appointments : "creates booking"
 Users ||--o{ Bills : "issues bill"
+Users ||--o{ PasswordResetTokens : "requests reset"
 
 Dentists ||--o{ DentistSchedule : "defines shift"
 Dentists ||--o{ DentistSessionSlots : "owns slots"
