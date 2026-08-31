@@ -56,3 +56,7 @@ nbdist/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Internal Reference Files
+document/.internal_commit_roadmap.md
+
