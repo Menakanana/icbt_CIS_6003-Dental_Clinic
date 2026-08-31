@@ -1,7 +1,7 @@
 # Sunrise Dental Clinic - Database Design Document & Data Dictionary
 
 ## Overview
-This document specifies the relational database schema, data dictionary, primary/foreign key relationships, and integrity constraints for **Sunrise Dental Clinic Management System** (`SunriseDentalClinicDB`).
+This document specifies the relational database schema, data dictionary, primary/foreign key relationships, and integrity constraints for **Sunrise Dental Clinic Management System** (`SunriseDentalClinic`).
 
 ---
 
@@ -55,7 +55,7 @@ Stores dentist profiles and per-dentist consultation fees.
 | `Specialization` | `VARCHAR(100)` | `NULL` | Dental specialization |
 | `LicenseNumber` | `VARCHAR(50)` | `NULL` | Dental Council license number |
 | `Qualifications` | `VARCHAR(255)` | `NULL` | Degrees & certifications |
-| `ConsultationFee`| `DECIMAL(10,2)`| `NOT NULL DEFAULT 500.00`| Individual consultation rate (LKR) |
+| `ConsultationFee`| `DECIMAL(10,2)`| `NOT NULL DEFAULT 1500.00`| Individual consultation rate (LKR) |
 | `ExperienceYears`| `INT` | `NULL` | Years of clinical practice |
 | `IsActive` | `BIT` | `NOT NULL DEFAULT 1` | Active status flag |
 
@@ -148,22 +148,48 @@ Stores immutable financial snapshots of issued bills.
 
 ---
 
+### 1.9 `password_reset_tokens` Table (Security & Authentication)
+Stores time-bound, secure single-use tokens for password reset verification.
+
+| Column | Data Type | Constraints | Description |
+|---|---|---|---|
+| `token_id` | `BIGINT` | `PRIMARY KEY IDENTITY(1,1)` | Unique token record identifier |
+| `token` | `VARCHAR(100)` | `UNIQUE, NOT NULL` | Generated security token string (`RST-...`) |
+| `userid` | `INT` | `FOREIGN KEY (Users), NOT NULL` | Target user account identifier |
+| `expiry_date` | `DATETIME2` | `NOT NULL` | Expiration timestamp (30 min duration) |
+| `is_used` | `BIT` | `NOT NULL DEFAULT 0` | Single-use consumption flag (0=Valid, 1=Used) |
+| `created_date` | `DATETIME2` | `NOT NULL DEFAULT GETDATE()` | Token issuance timestamp |
+
+---
+
+### 1.10 `clinic_settings` Table (System-wide Configuration)
+Stores key-value system configuration parameters (e.g. clinic charge, clinic name, address, phone).
+
+| Column | Data Type | Constraints | Description |
+|---|---|---|---|
+| `settingid` | `INT` | `PRIMARY KEY IDENTITY(1,1)` | Unique setting identifier |
+| `setting_key` | `VARCHAR(50)` | `UNIQUE, NOT NULL` | Configuration key (e.g. `clinic_charge`) |
+| `setting_value` | `VARCHAR(255)` | `NOT NULL` | Configuration value (e.g. `500.00`) |
+| `description` | `VARCHAR(255)` | `NULL` | Description of configuration setting |
+
+---
+
 ## 2. Foreign Key Relational Diagram
 
 ```
 [Users] (CreatedBy) ──────────┐
-                              ▼
-[Patients] ───────────► [Appointments] ◄────────── [TreatmentTypes]
-                             │    ▲
-                             │    │
-[Dentists] ──► [DentistSchedule] ─┼──► [DentistSessionSlots]
-    │                        │
-    └────────────────────────┼───────────┐
-                             ▼           ▼
-                         [Appointments] ──► [Bills]
+   │                          ▼
+   ├──► [password_reset_tokens]  [Patients] ───────────► [Appointments] ◄────────── [TreatmentTypes]
+   │                                                         │    ▲
+   │                                                         │    │
+[Dentists] ──► [DentistSchedule] ────────────────────────────┼──► [DentistSessionSlots]
+    │                                                        │
+    └────────────────────────────────────────────────────────┼───────────┐
+                                                             ▼           ▼
+[clinic_settings]                                       [Appointments] ──► [Bills]
 ```
 
 ---
 
-**Specification Version:** 4.0 (Pure Database Specification)  
-**Status:** Official Data Dictionary for `SunriseDentalClinicDB`
+**Specification Version:** 4.1 (Pure Database Specification - Updated with Security & Settings Tables)  
+**Status:** Official Data Dictionary for `SunriseDentalClinic`

@@ -317,6 +317,24 @@ body {
     box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.1);
 }
 
+.form-control.is-invalid {
+    border-color: #EF4444 !important;
+    background-color: #FEF2F2 !important;
+}
+
+.form-control.is-valid {
+    border-color: #10B981 !important;
+    background-color: #ECFDF5 !important;
+}
+
+.field-error-msg {
+    color: #DC2626;
+    font-size: 0.78rem;
+    margin-top: 0.3rem;
+    display: block;
+    font-weight: 600;
+}
+
 .btn-primary {
     background-color: var(--primary);
     color: white;
@@ -429,4 +447,86 @@ body {
     padding: 0.875rem 1.25rem;
     border-radius: var(--radius-sm);
     margin-bottom: 1.25rem;
+}
+
+/* ==========================================================================
+   DATA TABLE CLIENT-SIDE PAGINATION STYLING
+   ========================================================================== */
+
+.pagination-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: #FAFAFA;
+    border: 1px solid var(--border-color);
+    border-top: none;
+    border-bottom-left-radius: var(--radius-md);
+    border-bottom-right-radius: var(--radius-md);
+    font-size: 0.85rem;
+    color: var(--text-dark);
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.pagination-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pagination-info select.page-size-select {
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background-color: #FFFFFF;
+    color: var(--text-dark);
+    font-weight: 600;
+    cursor: pointer;
+    outline: none;
+}
+
+.pagination-info select.page-size-select:focus {
+    border-color: var(--primary);
+}
+
+.pagination-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.pagination-nav .page-numbers {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.pagination-nav button {
+    padding: 0.3rem 0.65rem;
+    border: 1px solid var(--border-color);
+    background-color: #FFFFFF;
+    color: var(--text-dark);
+    border-radius: var(--radius-sm);
+    font-size: 0.825rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+}
+
+.pagination-nav button:hover:not(:disabled) {
+    background-color: var(--primary-light);
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+.pagination-nav button.active {
+    background-color: var(--primary);
+    color: white;
+    border-color: var(--primary);
+    font-weight: 700;
+}
+
+.pagination-nav button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
 }

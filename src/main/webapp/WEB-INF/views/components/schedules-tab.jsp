@@ -12,7 +12,7 @@
             </div>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <label style="font-weight: 600; color: #065F46;">Roster Date:</label>
-                <input type="date" id="rosterDatePicker" class="form-control" style="width: 170px;" onchange="onRosterDateChange()">
+                <input type="date" id="rosterDatePicker" class="form-control" style="width: 170px;" onchange="onRosterDateChange()" oninput="onRosterDateChange()">
             </div>
         </div>
     </div>
@@ -53,14 +53,21 @@
                                 <span id="allocationBadge_${d.dentistId}" class="badge badge-receptionist" style="font-size: 0.85rem;">24 mins / patient (10 Tokens)</span>
                             </td>
                             <td>
-                                <form action="${pageContext.request.contextPath}/dentists/schedule/save" method="post" id="scheduleForm_${d.dentistId}" onsubmit="prepareScheduleSubmit(${d.dentistId})">
-                                    <input type="hidden" name="dentistId" value="${d.dentistId}">
-                                    <input type="hidden" name="scheduleDate" id="formScheduleDate_${d.dentistId}">
-                                    <input type="hidden" name="sessionStartTime" id="formStartTime_${d.dentistId}">
-                                    <input type="hidden" name="sessionEndTime" id="formEndTime_${d.dentistId}">
-                                    <input type="hidden" name="maxPatientsInSession" id="formMaxPatients_${d.dentistId}">
-                                    <button type="submit" class="btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; background-color: #059669; border-color: #047857;">Save Shift</button>
-                                </form>
+                                <div style="display: flex; gap: 0.4rem; align-items: center;">
+                                    <form action="${pageContext.request.contextPath}/dentists/schedule/save" method="post" id="scheduleForm_${d.dentistId}" onsubmit="prepareScheduleSubmit(${d.dentistId})">
+                                        <input type="hidden" name="dentistId" value="${d.dentistId}">
+                                        <input type="hidden" name="scheduleDate" id="formScheduleDate_${d.dentistId}">
+                                        <input type="hidden" name="sessionStartTime" id="formStartTime_${d.dentistId}">
+                                        <input type="hidden" name="sessionEndTime" id="formEndTime_${d.dentistId}">
+                                        <input type="hidden" name="maxPatientsInSession" id="formMaxPatients_${d.dentistId}">
+                                        <button type="submit" class="btn-primary" style="padding: 0.4rem 0.7rem; font-size: 0.82rem; background-color: #059669; border-color: #047857;">Save Shift</button>
+                                    </form>
+                                    <form action="${pageContext.request.contextPath}/dentists/schedule/off-duty" method="post" id="offDutyForm_${d.dentistId}" onsubmit="return prepareOffDutySubmit(${d.dentistId}, '<c:out value="${d.dentistName}"/>')">
+                                        <input type="hidden" name="dentistId" value="${d.dentistId}">
+                                        <input type="hidden" name="scheduleDate" id="offDutyScheduleDate_${d.dentistId}">
+                                        <button type="submit" class="btn-secondary" style="padding: 0.4rem 0.7rem; font-size: 0.82rem; background-color: #ef4444; border-color: #dc2626; color: white;">Mark Off Duty</button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     </c:forEach>
@@ -77,20 +84,56 @@
 </div>
 
 <script>
-    if (document.getElementById('rosterDatePicker')) {
-        document.getElementById('rosterDatePicker').valueAsDate = new Date();
-    }
+    document.addEventListener("DOMContentLoaded", function() {
+        const rosterPicker = document.getElementById('rosterDatePicker');
+        if (rosterPicker && !rosterPicker.value) {
+            const d = new Date();
+            rosterPicker.value = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        }
+    });
 
     function onRosterDateChange() {
         const dateVal = document.getElementById('rosterDatePicker').value;
-        console.log("Roster date changed to:", dateVal);
+        if (!dateVal) return;
+        loadRosterForDate(dateVal);
+    }
+
+    async function loadRosterForDate(dateVal) {
+        try {
+            const resp = await fetch('${pageContext.request.contextPath}/api/dentists/schedules/date?scheduleDate=' + dateVal);
+            if (resp.ok) {
+                const schedules = await resp.json();
+                schedules.forEach(s => {
+                    const dId = s.dentistId;
+                    const startTimeInput = document.getElementById('startTime_' + dId);
+                    const endTimeInput = document.getElementById('endTime_' + dId);
+                    const maxPatientsInput = document.getElementById('maxPatients_' + dId);
+                    const badge = document.getElementById('allocationBadge_' + dId);
+
+                    if (s.isActive === false) {
+                        if (badge) {
+                            badge.innerText = "OFF DUTY (Not Working)";
+                            badge.style.backgroundColor = "#FEE2E2";
+                            badge.style.color = "#991B1B";
+                        }
+                    } else if (s.sessionStartTime && s.sessionEndTime) {
+                        if (startTimeInput) startTimeInput.value = s.sessionStartTime.substring(0, 5);
+                        if (endTimeInput) endTimeInput.value = s.sessionEndTime.substring(0, 5);
+                        if (maxPatientsInput && s.maxPatientsInSession) maxPatientsInput.value = s.maxPatientsInSession;
+                        calculateRosterAllocation(dId);
+                    }
+                });
+            }
+        } catch (e) {
+            console.error("Failed to load roster for date:", e);
+        }
     }
 
     function calculateRosterAllocation(dentistId) {
-        const startVal = document.getElementById(`startTime_\${dentistId}`).value;
-        const endVal = document.getElementById(`endTime_\${dentistId}`).value;
-        const countVal = parseInt(document.getElementById(`maxPatients_\${dentistId}`).value) || 1;
-        const badge = document.getElementById(`allocationBadge_\${dentistId}`);
+        const startVal = document.getElementById('startTime_' + dentistId).value;
+        const endVal = document.getElementById('endTime_' + dentistId).value;
+        const countVal = parseInt(document.getElementById('maxPatients_' + dentistId).value) || 1;
+        const badge = document.getElementById('allocationBadge_' + dentistId);
 
         if (!startVal || !endVal) {
             badge.innerText = "Invalid Time";
@@ -115,22 +158,68 @@
         badge.style.color = "#3730A3";
 
         let minsPerPatient = Math.max(5, Math.floor(diff / countVal));
-        badge.innerText = `\${minsPerPatient} mins / patient (\${countVal} Tokens)`;
+        badge.innerText = minsPerPatient + ' mins / patient (' + countVal + ' Tokens)';
     }
 
     function prepareScheduleSubmit(dentistId) {
         const dateVal = document.getElementById('rosterDatePicker').value || new Date().toISOString().split('T')[0];
-        document.getElementById(`formScheduleDate_\${dentistId}`).value = dateVal;
-        document.getElementById(`formStartTime_\${dentistId}`).value = document.getElementById(`startTime_\${dentistId}`).value;
-        document.getElementById(`formEndTime_\${dentistId}`).value = document.getElementById(`endTime_\${dentistId}`).value;
-        document.getElementById(`formMaxPatients_\${dentistId}`).value = document.getElementById(`maxPatients_\${dentistId}`).value;
+        const startVal = document.getElementById('startTime_' + dentistId).value;
+        const endVal = document.getElementById('endTime_' + dentistId).value;
+        const countVal = parseInt(document.getElementById('maxPatients_' + dentistId).value) || 0;
+        const badge = document.getElementById('allocationBadge_' + dentistId);
+
+        if (!startVal || !endVal) {
+            if (badge) {
+                badge.innerText = "Invalid Time";
+                badge.style.backgroundColor = "#FEE2E2";
+                badge.style.color = "#991B1B";
+            }
+            return false;
+        }
+
+        const [sHours, sMins] = startVal.split(':').map(Number);
+        const [eHours, eMins] = endVal.split(':').map(Number);
+        let diff = (eHours * 60 + eMins) - (sHours * 60 + sMins);
+
+        if (diff <= 0) {
+            if (badge) {
+                badge.innerText = "End time must be after start time";
+                badge.style.backgroundColor = "#FEE2E2";
+                badge.style.color = "#991B1B";
+            }
+            return false;
+        }
+
+        if (countVal <= 0) {
+            if (badge) {
+                badge.innerText = "Max capacity must be at least 1";
+                badge.style.backgroundColor = "#FEE2E2";
+                badge.style.color = "#991B1B";
+            }
+            return false;
+        }
+
+        document.getElementById('formScheduleDate_' + dentistId).value = dateVal;
+        document.getElementById('formStartTime_' + dentistId).value = startVal;
+        document.getElementById('formEndTime_' + dentistId).value = endVal;
+        document.getElementById('formMaxPatients_' + dentistId).value = countVal;
         return true;
     }
 
-    // Trigger initial calculation for all doctors
+    function prepareOffDutySubmit(dentistId, dentistName) {
+        const dateVal = document.getElementById('rosterDatePicker').value || new Date().toISOString().split('T')[0];
+        document.getElementById('offDutyScheduleDate_' + dentistId).value = dateVal;
+        return confirm("Are you sure you want to mark " + dentistName + " OFF DUTY for " + dateVal + "?\\n\\nThey will be removed from the operational booking roster on this day and no appointments can be scheduled.");
+    }
+
+    // Trigger initial calculation and schedule load for all doctors
     document.addEventListener("DOMContentLoaded", function() {
+        const dateVal = document.getElementById('rosterDatePicker') ? document.getElementById('rosterDatePicker').value : new Date().toISOString().split('T')[0];
         <c:forEach items="${dentists}" var="d">
             calculateRosterAllocation(${d.dentistId});
         </c:forEach>
+        if (dateVal) {
+            loadRosterForDate(dateVal);
+        }
     });
 </script>
